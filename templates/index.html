@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Shopify Customer Lifetime Value Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-100">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold text-white mb-4">
+                    Advanced Shopify<br>
+                    <span class="text-gradient">Customer Lifetime Value</span><br>
+                    Prediction Platform
+                </h1>
+                <p class="lead text-white-75 mb-4">
+                    Supercharge your Shopify store with real-time, predictive CLV analytics that go 
+                    beyond basic reporting. Connect your shopify data and custom data sources for 
+                    a complete customer view.
+                </p>
+                
+                <div class="feature-list mb-4">
+                    <div class="feature-item">
+                        <i data-feather="check-circle" class="text-white me-2"></i>
+                        <span class="text-white">Predictive Analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <i data-feather="check-circle" class="text-white me-2"></i>
+                        <span class="text-white">Real-time Updates</span>
+                    </div>
+                    <div class="feature-item">
+                        <i data-feather="check-circle" class="text-white me-2"></i>
+                        <span class="text-white">Custom Data Integration</span>
+                    </div>
+                </div>
+                
+                <div class="cta-buttons">
+                    <a href="{{ url_for('auth') }}" class="btn btn-light btn-lg me-3">
+                        <i data-feather="play" class="me-2"></i>
+                        Request Demo
+                    </a>
+                    <button class="btn btn-outline-light btn-lg me-3">
+                        Benefits
+                    </button>
+                    <button class="btn btn-success btn-lg">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="dashboard-preview">
+                    <div class="card shadow-lg border-0">
+                        <div class="card-header bg-white">
+                            <div class="d-flex align-items-center">
+                                <div class="window-controls me-3">
+                                    <span class="dot dot-red"></span>
+                                    <span class="dot dot-yellow"></span>
+                                    <span class="dot dot-green"></span>
+                                </div>
+                                <h6 class="mb-0 text-muted">CLV Dashboard Preview</h6>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="metric-card">
+                                        <div class="metric-value">$2,847</div>
+                                        <div class="metric-label">Avg CLV</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card">
+                                        <div class="metric-value">1,246</div>
+                                        <div class="metric-label">Customers</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-preview">
+                                <canvas id="previewChart" width="300" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Trusted By Section -->
+<section class="trusted-section py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h3 class="text-muted">Trusted by Industry Leaders</h3>
+        </div>
+        <div class="row justify-content-center align-items-center">
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="circle" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="hexagon" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="triangle" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="square" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="octagon" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
+                <div class="trust-logo">
+                    <i data-feather="star" class="text-muted" style="width: 48px; height: 48px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Key Platform Benefits -->
+<section class="benefits-section py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Key Platform Benefits</h2>
+            <p class="lead text-muted">Unlock the full potential of your customer data</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="trending-up" class="text-success"></i>
+                    </div>
+                    <h5>Predictive CLV Analytics</h5>
+                    <p class="text-muted">Advanced machine learning algorithms predict customer lifetime value with 95% accuracy, helping you identify your most valuable customers.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="refresh-cw" class="text-success"></i>
+                    </div>
+                    <h5>Real-time Data Sync</h5>
+                    <p class="text-muted">Seamlessly sync with your Shopify store for real-time updates on orders, customers, and revenue metrics.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="target" class="text-success"></i>
+                    </div>
+                    <h5>Customer Segmentation</h5>
+                    <p class="text-muted">Automatically segment customers by CLV, purchase behavior, and churn risk to optimize your marketing campaigns.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="bar-chart-2" class="text-success"></i>
+                    </div>
+                    <h5>Advanced Reporting</h5>
+                    <p class="text-muted">Comprehensive dashboards with interactive charts and actionable insights to drive business growth.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="shield" class="text-success"></i>
+                    </div>
+                    <h5>Enterprise Security</h5>
+                    <p class="text-muted">Bank-level security with encrypted data transmission and secure OAuth authentication with Shopify.</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="benefit-card h-100">
+                    <div class="benefit-icon">
+                        <i data-feather="zap" class="text-success"></i>
+                    </div>
+                    <h5>Quick Setup</h5>
+                    <p class="text-muted">Get started in minutes with our streamlined Shopify integration. No technical expertise required.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="fw-bold text-white mb-4">Ready to Unlock Your Customer Value?</h2>
+                <p class="lead text-white-75 mb-4">
+                    Join thousands of Shopify merchants who are already using our platform to optimize their customer relationships and increase revenue.
+                </p>
+                <a href="{{ url_for('auth') }}" class="btn btn-light btn-lg">
+                    <i data-feather="arrow-right" class="me-2"></i>
+                    Connect Your Shopify Store
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Preview chart
+const ctx = document.getElementById('previewChart').getContext('2d');
+const previewChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'CLV Trend',
+            data: [2200, 2400, 2650, 2800, 2750, 2847],
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                display: false
+            },
+            y: {
+                display: false
+            }
+        },
+        elements: {
+            point: {
+                radius: 0
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

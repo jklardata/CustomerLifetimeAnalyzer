@@ -1,0 +1,418 @@
+:root {
+    --primary-green: #28a745;
+    --success-light: rgba(40, 167, 69, 0.1);
+    --primary-light: rgba(0, 123, 255, 0.1);
+    --warning-light: rgba(255, 193, 7, 0.1);
+    --danger-light: rgba(220, 53, 69, 0.1);
+    --gradient-start: #28a745;
+    --gradient-end: #20c997;
+    --background: 210 11% 98%; /* #F5F7FA */
+    --foreground: 210 11% 15%; /* #222831 */
+    --muted: 210 11% 71%; /* #9CA3AF */
+    --border: 210 11% 91%; /* #E5E7EB */
+}
+
+/* Global Styles */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    line-height: 1.6;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+}
+
+.text-white-75 {
+    color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--gradient-end) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3Ccircle cx='53' cy='53' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.3;
+}
+
+.hero-section .container {
+    position: relative;
+    z-index: 1;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.cta-buttons .btn {
+    margin-bottom: 1rem;
+}
+
+/* Dashboard Preview */
+.dashboard-preview {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.window-controls {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-red { background-color: #ff5f56; }
+.dot-yellow { background-color: #ffbd2e; }
+.dot-green { background-color: #27ca3f; }
+
+.metric-card .metric-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-green);
+}
+
+.metric-card .metric-label {
+    font-size: 0.875rem;
+    color: hsl(var(--muted));
+    margin: 0;
+}
+
+.chart-preview {
+    height: 100px;
+    position: relative;
+}
+
+/* Trusted Section */
+.trusted-section {
+    background-color: white;
+    border-top: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+}
+
+.trust-logo {
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.trust-logo:hover {
+    opacity: 1;
+}
+
+/* Benefits Section */
+.benefits-section {
+    padding: 4rem 0;
+}
+
+.benefit-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    border: 1px solid hsl(var(--border));
+}
+
+.benefit-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.benefit-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--success-light);
+}
+
+.benefit-card h5 {
+    margin-bottom: 1rem;
+    color: hsl(var(--foreground));
+}
+
+/* CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, #1e3d59 0%, #2d5aa0 100%);
+    position: relative;
+}
+
+/* Dashboard Styles */
+.metric-card {
+    transition: transform 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bg-success-light {
+    background-color: var(--success-light) !important;
+}
+
+.bg-primary-light {
+    background-color: var(--primary-light) !important;
+}
+
+.bg-warning-light {
+    background-color: var(--warning-light) !important;
+}
+
+.bg-danger-light {
+    background-color: var(--danger-light) !important;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: hsl(var(--foreground));
+}
+
+.metric-label {
+    color: hsl(var(--muted));
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Auth Page */
+.auth-card {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.auth-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--success-light);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.auth-icon i {
+    width: 32px;
+    height: 32px;
+}
+
+.security-info h6 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.access-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.925rem;
+}
+
+.what-we-access {
+    background: hsl(var(--background));
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid hsl(var(--border));
+}
+
+.faq-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid hsl(var(--border));
+}
+
+.accordion-button {
+    font-size: 0.925rem;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--success-light);
+    color: var(--primary-green);
+    border-color: transparent;
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+    border-color: var(--primary-green);
+}
+
+.accordion-body {
+    font-size: 0.875rem;
+    color: hsl(var(--muted));
+    padding: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 3rem 0;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .cta-buttons .btn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    
+    .dashboard-preview {
+        margin-top: 2rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+    }
+    
+    .benefit-card {
+        padding: 1.5rem;
+    }
+}
+
+/* Custom Bootstrap Overrides */
+.btn-success {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.text-success {
+    color: var(--primary-green) !important;
+}
+
+.bg-success {
+    background-color: var(--primary-green) !important;
+}
+
+.border-success {
+    border-color: var(--primary-green) !important;
+}
+
+.card {
+    border: 1px solid hsl(var(--border));
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: hsl(var(--foreground));
+    border-bottom: 2px solid hsl(var(--border));
+}
+
+.badge {
+    font-weight: 500;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: 210 11% 15%; /* #222831 */
+        --foreground: 210 11% 98%; /* #F5F7FA */
+        --muted: 210 11% 71%; /* #9CA3AF */
+        --border: 210 11% 25%; /* #3D4852 */
+    }
+    
+    .card, .benefit-card, .what-we-access, .faq-section {
+        background-color: hsl(210 11% 20%);
+        color: hsl(var(--foreground));
+    }
+    
+    .table th {
+        color: hsl(var(--foreground));
+    }
+    
+    .trusted-section {
+        background-color: hsl(210 11% 18%);
+    }
+}

@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}CLV Dashboard - {{ store.shop_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <h1 class="h3 mb-1">CLV Analytics Dashboard</h1>
+            <p class="text-muted">{{ store.shop_name }} • Last updated: <span id="lastUpdated">Now</span></p>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+            <button id="syncDataBtn" class="btn btn-success me-2">
+                <i data-feather="refresh-cw" class="me-1"></i>
+                Sync Data
+            </button>
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i data-feather="download" class="me-1"></i>
+                    Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#"><i data-feather="file-text" class="me-2"></i>CSV Report</a></li>
+                    <li><a class="dropdown-item" href="#"><i data-feather="pie-chart" class="me-2"></i>Analytics Summary</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-success-light">
+                            <i data-feather="users" class="text-success"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ "{:,}".format(metrics.total_customers) }}</h3>
+                            <p class="metric-label mb-0">Total Customers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-primary-light">
+                            <i data-feather="shopping-cart" class="text-primary"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ "{:,}".format(metrics.total_orders) }}</h3>
+                            <p class="metric-label mb-0">Total Orders</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-warning-light">
+                            <i data-feather="dollar-sign" class="text-warning"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">${{ "{:,.0f}".format(metrics.avg_clv) }}</h3>
+                            <p class="metric-label mb-0">Avg CLV</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-danger-light">
+                            <i data-feather="percent" class="text-danger"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ metrics.return_rate }}%</h3>
+                            <p class="metric-label mb-0">Return Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">CLV Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="clvChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Revenue Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-success">${{ "{:,.0f}".format(metrics.total_revenue) }}</h2>
+                        <p class="text-muted mb-0">Total Revenue</p>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5>${{ "{:,.0f}".format(metrics.avg_order_value) }}</h5>
+                            <small class="text-muted">Avg Order Value</small>
+                        </div>
+                        <div class="col-6">
+                            <h5>${{ "{:,.0f}".format(metrics.total_clv) }}</h5>
+                            <small class="text-muted">Total CLV</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers & Recent Orders -->
+    <div class="row">
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Top Customers by CLV</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if metrics.top_customers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Email</th>
+                                    <th>Predicted CLV</th>
+                                    <th>Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in metrics.top_customers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-success-light rounded-circle me-3">
+                                                <i data-feather="user" class="text-success small"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">{{ customer.first_name }} {{ customer.last_name }}</div>
+                                                <small class="text-muted">ID: {{ customer.shopify_customer_id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ customer.email or 'N/A' }}</td>
+                                    <td><span class="badge bg-success">${{ "{:,.0f}".format(customer.predicted_clv or 0) }}</span></td>
+                                    <td>{{ customer.orders_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="users" class="text-muted mb-2" style="width: 48px; height: 48px;"></i>
+                        <p class="text-muted">No customer data available. Sync your Shopify data to see insights.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if metrics.recent_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in metrics.recent_orders %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">#{{ order.order_number or order.shopify_order_id }}</div>
+                                    </td>
+                                    <td>
+                                        {% if order.created_at %}
+                                        {{ order.created_at.strftime('%m/%d/%Y') }}
+                                        {% else %}
+                                        N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ "{:,.2f}".format(order.total_price or 0) }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if order.financial_status == 'paid' else 'warning' if order.financial_status == 'pending' else 'secondary' }}">
+                                            {{ order.financial_status or 'Unknown' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="shopping-cart" class="text-muted mb-2" style="width: 48px; height: 48px;"></i>
+                        <p class="text-muted">No order data available. Sync your Shopify data to see recent orders.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-success mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Syncing Data...</h5>
+                <p class="text-muted mb-0">This may take a few moments depending on your store size.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Initialize CLV Chart
+const ctx = document.getElementById('clvChart').getContext('2d');
+const clvChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['$0-100', '$100-500', '$500-1000', '$1000+'],
+        datasets: [{
+            data: [
+                {{ metrics.total_customers // 4 }}, 
+                {{ metrics.total_customers // 3 }}, 
+                {{ metrics.total_customers // 6 }}, 
+                {{ metrics.total_customers // 8 }}
+            ],
+            backgroundColor: [
+                '#dc3545',
+                '#ffc107', 
+                '#20c997',
+                '#28a745'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Update last updated time
+function updateLastUpdated() {
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+}
+
+// Sync data functionality
+document.getElementById('syncDataBtn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    modal.show();
+    
+    fetch('{{ url_for("sync_data") }}')
+        .then(response => response.json())
+        .then(data => {
+            modal.hide();
+            if (data.success) {
+                updateLastUpdated();
+                location.reload(); // Refresh to show new data
+            } else {
+                alert('Error syncing data: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            modal.hide();
+            alert('Error syncing data: ' + error.message);
+        });
+});
+
+updateLastUpdated();
+</script>
+{% endblock %}

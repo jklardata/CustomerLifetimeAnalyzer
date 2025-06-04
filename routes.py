@@ -7,6 +7,7 @@ import logging
 import traceback
 from urllib.parse import urlencode
 import secrets
+from datetime import datetime, timedelta
 
 @app.route('/')
 def index():
@@ -17,8 +18,14 @@ def index():
 def auth():
     """Shopify OAuth initiation"""
     shop = request.args.get('shop')
-    if not shop:
+    demo_mode = request.args.get('demo')
+    
+    if not shop and not demo_mode:
         return render_template('auth.html')
+    
+    # Demo mode for testing
+    if demo_mode == 'true':
+        return demo_login()
     
     # Validate shop domain
     if not shop.endswith('.myshopify.com'):
@@ -39,6 +46,96 @@ def auth():
     
     oauth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
     return redirect(oauth_url)
+
+def demo_login():
+    """Demo login for testing platform functionality"""
+    try:
+        # Create or get demo store
+        demo_store = ShopifyStore.query.filter_by(shop_domain="clv-test-store.myshopify.com").first()
+        if not demo_store:
+            demo_store = ShopifyStore()
+            demo_store.shop_domain = "clv-test-store.myshopify.com"
+            demo_store.access_token = "demo_access_token"
+            demo_store.shop_id = "demo_shop_123"
+            demo_store.shop_name = "CLV Test Store"
+            demo_store.email = "test@clvstore.com"
+            db.session.add(demo_store)
+            db.session.commit()
+        
+        # Create sample customers if none exist
+        if Customer.query.filter_by(store_id=demo_store.id).count() == 0:
+            create_sample_data(demo_store)
+        
+        # Set session data
+        session['store_id'] = demo_store.id
+        session['shop_domain'] = demo_store.shop_domain
+        
+        flash('Connected to demo store! This shows platform functionality with sample data.', 'success')
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        logging.error(f"Demo login error: {str(e)}")
+        flash('Error setting up demo mode. Please try again.', 'error')
+        return redirect(url_for('auth'))
+
+def create_sample_data(store):
+    """Create sample customers and orders for demo"""
+    import random
+    from decimal import Decimal
+    
+    # Sample customer data
+    customers_data = [
+        {"name": "John Smith", "email": "john.smith@example.com", "orders": 5, "total": 1250.00},
+        {"name": "Sarah Johnson", "email": "sarah.j@example.com", "orders": 3, "total": 890.50},
+        {"name": "Michael Chen", "email": "m.chen@example.com", "orders": 8, "total": 2100.75},
+        {"name": "Emma Wilson", "email": "emma.wilson@example.com", "orders": 2, "total": 450.25},
+        {"name": "David Rodriguez", "email": "d.rodriguez@example.com", "orders": 6, "total": 1680.00},
+        {"name": "Lisa Brown", "email": "lisa.brown@example.com", "orders": 4, "total": 720.50},
+        {"name": "James Taylor", "email": "j.taylor@example.com", "orders": 7, "total": 1950.25},
+        {"name": "Anna Garcia", "email": "anna.garcia@example.com", "orders": 3, "total": 675.75}
+    ]
+    
+    for i, customer_data in enumerate(customers_data):
+        # Create customer
+        customer = Customer()
+        customer.shopify_customer_id = f"demo_cust_{i+1}"
+        customer.store_id = store.id
+        customer.email = customer_data["email"]
+        names = customer_data["name"].split()
+        customer.first_name = names[0]
+        customer.last_name = names[1] if len(names) > 1 else ""
+        customer.total_spent = Decimal(str(customer_data["total"]))
+        customer.orders_count = customer_data["orders"]
+        customer.created_at = datetime.utcnow() - timedelta(days=random.randint(30, 365))
+        
+        db.session.add(customer)
+        db.session.flush()  # Get customer ID
+        
+        # Create orders for customer
+        for order_num in range(customer_data["orders"]):
+            order = Order()
+            order.shopify_order_id = f"demo_order_{i+1}_{order_num+1}"
+            order.store_id = store.id
+            order.customer_id = customer.id
+            order.order_number = f"#{1000 + (i * 10) + order_num + 1}"
+            order.total_price = Decimal(str(customer_data["total"] / customer_data["orders"]))
+            order.subtotal_price = order.total_price * Decimal('0.9')
+            order.total_tax = order.total_price * Decimal('0.1')
+            order.currency = "USD"
+            order.financial_status = "paid"
+            order.fulfillment_status = "fulfilled"
+            order.created_at = customer.created_at + timedelta(days=random.randint(1, 300))
+            order.updated_at = order.created_at
+            order.processed_at = order.created_at
+            
+            db.session.add(order)
+    
+    db.session.commit()
+    
+    # Calculate CLV for all customers
+    clv_calculator = CLVCalculator()
+    clv_calculator.calculate_store_clv(store)
+    
+    logging.info(f"Created sample data for {len(customers_data)} customers")
 
 @app.route('/callback')
 def callback():

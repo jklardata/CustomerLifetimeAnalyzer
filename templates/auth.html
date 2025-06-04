@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Connect Your Shopify Store{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="auth-card">
+                <div class="text-center mb-4">
+                    <div class="auth-icon">
+                        <i data-feather="shopping-bag" class="text-success"></i>
+                    </div>
+                    <h2 class="fw-bold">Connect Your Shopify Store</h2>
+                    <p class="text-muted">Start analyzing your customer lifetime value with our advanced AI-powered platform.</p>
+                </div>
+                
+                <div class="card border-0 shadow">
+                    <div class="card-body p-4">
+                        <form action="{{ url_for('auth') }}" method="GET">
+                            <div class="mb-3">
+                                <label for="shop" class="form-label">Shopify Store URL</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-lg" id="shop" name="shop" 
+                                           placeholder="your-store-name" required>
+                                    <span class="input-group-text">.myshopify.com</span>
+                                </div>
+                                <div class="form-text">
+                                    <i data-feather="info" class="me-1"></i>
+                                    Enter your Shopify store name (e.g., "my-awesome-store")
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
+                                <i data-feather="external-link" class="me-2"></i>
+                                Connect with Shopify
+                            </button>
+                        </form>
+                        
+                        <hr class="my-3">
+                        
+                        <div class="security-info">
+                            <h6 class="text-muted mb-2">
+                                <i data-feather="shield" class="me-1"></i>
+                                Secure OAuth Authentication
+                            </h6>
+                            <ul class="list-unstyled small text-muted mb-0">
+                                <li class="mb-1">
+                                    <i data-feather="check" class="me-1 text-success"></i>
+                                    We use Shopify's official OAuth protocol
+                                </li>
+                                <li class="mb-1">
+                                    <i data-feather="check" class="me-1 text-success"></i>
+                                    Your credentials are never stored
+                                </li>
+                                <li class="mb-1">
+                                    <i data-feather="check" class="me-1 text-success"></i>
+                                    Read-only access to analytics data
+                                </li>
+                                <li>
+                                    <i data-feather="check" class="me-1 text-success"></i>
+                                    Revoke access anytime from Shopify admin
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="what-we-access mt-4">
+                    <h5 class="mb-3">What We'll Access</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="access-item">
+                                <i data-feather="users" class="text-success me-2"></i>
+                                <span>Customer data</span>
+                            </div>
+                            <div class="access-item">
+                                <i data-feather="shopping-cart" class="text-success me-2"></i>
+                                <span>Order history</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="access-item">
+                                <i data-feather="bar-chart-2" class="text-success me-2"></i>
+                                <span>Analytics data</span>
+                            </div>
+                            <div class="access-item">
+                                <i data-feather="package" class="text-success me-2"></i>
+                                <span>Product information</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="faq-section mt-4">
+                    <h6 class="mb-3">Frequently Asked Questions</h6>
+                    
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item border-0 mb-2">
+                            <h2 class="accordion-header" id="faq1">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
+                                    Is my data secure?
+                                </button>
+                            </h2>
+                            <div id="collapse1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Yes, we use enterprise-grade security with encrypted data transmission and follow Shopify's security best practices. Your data is stored securely and never shared with third parties.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item border-0 mb-2">
+                            <h2 class="accordion-header" id="faq2">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
+                                    How long does setup take?
+                                </button>
+                            </h2>
+                            <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Setup takes less than 2 minutes. Simply connect your store and we'll automatically sync your data to start generating CLV insights immediately.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header" id="faq3">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
+                                    Can I disconnect my store?
+                                </button>
+                            </h2>
+                            <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    Yes, you can disconnect your store at any time from your Shopify admin panel or contact us to remove access immediately.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

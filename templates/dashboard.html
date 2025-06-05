@@ -404,6 +404,44 @@ const clvChart = new Chart(ctx, {
     }
 });
 
+// Initialize AOV Trend Chart
+const aovCtx = document.getElementById('aovTrendChart');
+if (aovCtx) {
+    const aovTrendData = {{ metrics.aov_trend.trend_data | tojson }};
+    const aovChart = new Chart(aovCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: aovTrendData.map(d => new Date(d.date).toLocaleDateString()),
+            datasets: [{
+                data: aovTrendData.map(d => d.aov),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { 
+                    display: false,
+                    beginAtZero: true
+                }
+            },
+            elements: {
+                point: { radius: 0 }
+            }
+        }
+    });
+}
+
 // Update last updated time
 function updateLastUpdated() {
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();

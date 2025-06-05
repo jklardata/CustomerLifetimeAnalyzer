@@ -277,6 +277,132 @@ class CLVCalculator:
             logging.error(f"Error generating CLV insights: {str(e)}")
             return {}
     
+    def get_customer_segmentation_by_clv(self, store) -> Dict:
+        """Customer segmentation by CLV with detailed metrics"""
+        try:
+            customers = Customer.query.filter(
+                and_(
+                    Customer.store_id == store.id,
+                    Customer.predicted_clv.isnot(None),
+                    Customer.predicted_clv > 0
+                )
+            ).order_by(Customer.predicted_clv.desc()).all()
+            
+            if not customers:
+                return {'high': 0, 'medium': 0, 'low': 0, 'segments': {}}
+            
+            # Calculate quartiles for segmentation
+            clv_values = [float(customer.predicted_clv) for customer in customers]
+            clv_df = pd.DataFrame({'clv': clv_values})
+            
+            q75 = clv_df['clv'].quantile(0.75)
+            q25 = clv_df['clv'].quantile(0.25)
+            
+            # Segment customers
+            high_value = len([c for c in customers if float(c.predicted_clv) >= q75])
+            medium_value = len([c for c in customers if q25 <= float(c.predicted_clv) < q75])
+            low_value = len([c for c in customers if float(c.predicted_clv) < q25])
+            
+            total = len(customers)
+            
+            return {
+                'high': high_value,
+                'medium': medium_value,
+                'low': low_value,
+                'segments': {
+                    'high_value': {'count': high_value, 'percentage': round((high_value/total)*100, 1)},
+                    'medium_value': {'count': medium_value, 'percentage': round((medium_value/total)*100, 1)},
+                    'low_value': {'count': low_value, 'percentage': round((low_value/total)*100, 1)}
+                }
+            }
+            
+        except Exception as e:
+            logging.error(f"Error calculating customer segmentation: {str(e)}")
+            return {'high': 0, 'medium': 0, 'low': 0, 'segments': {}}
+    
+    def calculate_aov_trend(self, store, days=30) -> Dict:
+        """Calculate Average Order Value trend over specified days"""
+        try:
+            from sqlalchemy import func
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            
+            # Get daily AOV for the period
+            daily_aov = db.session.query(
+                func.date(Order.created_at).label('date'),
+                func.avg(Order.total_price).label('aov')
+            ).filter(
+                and_(
+                    Order.store_id == store.id,
+                    Order.created_at >= cutoff_date,
+                    Order.total_price.isnot(None)
+                )
+            ).group_by(func.date(Order.created_at)).all()
+            
+            if not daily_aov:
+                return {'trend_data': [], 'current_aov': 0, 'change_percentage': 0}
+            
+            # Format data for charts
+            trend_data = []
+            for date, aov in daily_aov:
+                trend_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'aov': float(aov) if aov else 0
+                })
+            
+            # Calculate current vs previous period
+            current_aov = trend_data[-1]['aov'] if trend_data else 0
+            previous_aov = trend_data[0]['aov'] if len(trend_data) > 1 else current_aov
+            
+            change_percentage = 0
+            if previous_aov > 0:
+                change_percentage = ((current_aov - previous_aov) / previous_aov) * 100
+            
+            return {
+                'trend_data': trend_data,
+                'current_aov': round(current_aov, 2),
+                'change_percentage': round(change_percentage, 1)
+            }
+            
+        except Exception as e:
+            logging.error(f"Error calculating AOV trend: {str(e)}")
+            return {'trend_data': [], 'current_aov': 0, 'change_percentage': 0}
+    
+    def calculate_churn_risk_metrics(self, store) -> Dict:
+        """Calculate churn risk metrics for all customers"""
+        try:
+            customers = Customer.query.filter_by(store_id=store.id).all()
+            if not customers:
+                return {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0}
+            
+            high_risk = 0
+            medium_risk = 0
+            low_risk = 0
+            
+            for customer in customers:
+                churn_risk = self.predict_churn_risk(customer)
+                
+                if churn_risk >= 0.7:
+                    high_risk += 1
+                elif churn_risk >= 0.4:
+                    medium_risk += 1
+                else:
+                    low_risk += 1
+            
+            total_at_risk = high_risk + medium_risk
+            total_customers = len(customers)
+            
+            return {
+                'high_risk': high_risk,
+                'medium_risk': medium_risk,
+                'low_risk': low_risk,
+                'total_at_risk': total_at_risk,
+                'at_risk_percentage': round((total_at_risk / total_customers) * 100, 1) if total_customers > 0 else 0
+            }
+            
+        except Exception as e:
+            logging.error(f"Error calculating churn risk metrics: {str(e)}")
+            return {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
+    
     def generate_recommendations(self, customers: List[Customer], avg_clv: float) -> List[str]:
         """Generate actionable CLV recommendations"""
         recommendations = []

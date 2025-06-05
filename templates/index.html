@@ -39,12 +39,12 @@
                         <i data-feather="play" class="me-2"></i>
                         Request Demo
                     </a>
-                    <button class="btn btn-outline-light btn-lg me-3">
+                    <a href="https://clv.klardata.com/benefits" class="btn btn-outline-light btn-lg me-3" target="_blank">
                         Benefits
-                    </button>
-                    <button class="btn btn-success btn-lg">
+                    </a>
+                    <a href="https://clv.klardata.com/#features" class="btn btn-success btn-lg" target="_blank">
                         Learn More
-                    </button>
+                    </a>
                 </div>
             </div>
             
@@ -87,42 +87,19 @@
     </div>
 </section>
 
-<!-- Trusted By Section -->
-<section class="trusted-section py-5">
+<!-- CTA Section - Moved from bottom -->
+<section class="cta-section py-5">
     <div class="container">
-        <div class="text-center mb-5">
-            <h3 class="text-muted">Trusted by Industry Leaders</h3>
-        </div>
-        <div class="row justify-content-center align-items-center">
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="circle" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="hexagon" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="triangle" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="square" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="octagon" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6 text-center mb-4">
-                <div class="trust-logo">
-                    <i data-feather="star" class="text-muted" style="width: 48px; height: 48px;"></i>
-                </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="fw-bold text-white mb-4">Ready to Unlock Your Customer Value?</h2>
+                <p class="lead text-white-75 mb-4">
+                    Join thousands of Shopify merchants who are already using our platform to optimize their customer relationships and increase revenue.
+                </p>
+                <a href="{{ url_for('auth') }}" class="btn btn-light btn-lg">
+                    <i data-feather="arrow-right" class="me-2"></i>
+                    Connect Your Shopify Store
+                </a>
             </div>
         </div>
     </div>
@@ -200,23 +177,7 @@
     </div>
 </section>
 
-<!-- CTA Section -->
-<section class="cta-section py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h2 class="fw-bold text-white mb-4">Ready to Unlock Your Customer Value?</h2>
-                <p class="lead text-white-75 mb-4">
-                    Join thousands of Shopify merchants who are already using our platform to optimize their customer relationships and increase revenue.
-                </p>
-                <a href="{{ url_for('auth') }}" class="btn btn-light btn-lg">
-                    <i data-feather="arrow-right" class="me-2"></i>
-                    Connect Your Shopify Store
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
+
 {% endblock %}
 
 {% block extra_scripts %}

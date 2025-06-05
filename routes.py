@@ -282,6 +282,8 @@ def health():
 def get_dashboard_metrics(store):
     """Calculate dashboard metrics for a store"""
     try:
+        clv_calculator = CLVCalculator()
+        
         # Basic counts
         total_customers = Customer.query.filter_by(store_id=store.id).count()
         total_orders = Order.query.filter_by(store_id=store.id).count()
@@ -297,6 +299,11 @@ def get_dashboard_metrics(store):
         # Return rate
         total_returns = Order.query.filter_by(store_id=store.id, is_returned=True).count()
         return_rate = (total_returns / total_orders * 100) if total_orders > 0 else 0
+        
+        # New enhanced metrics
+        customer_segmentation = clv_calculator.get_customer_segmentation_by_clv(store)
+        aov_trend = clv_calculator.calculate_aov_trend(store, 30)
+        churn_risk = clv_calculator.calculate_churn_risk_metrics(store)
         
         # Top customers by CLV
         top_customers = Customer.query.filter_by(store_id=store.id)\
@@ -318,7 +325,11 @@ def get_dashboard_metrics(store):
             'total_clv': float(total_clv),
             'return_rate': round(return_rate, 2),
             'top_customers': top_customers,
-            'recent_orders': recent_orders
+            'recent_orders': recent_orders,
+            # New metrics
+            'customer_segmentation': customer_segmentation,
+            'aov_trend': aov_trend,
+            'churn_risk': churn_risk
         }
         
     except Exception as e:
@@ -332,7 +343,10 @@ def get_dashboard_metrics(store):
             'total_clv': 0,
             'return_rate': 0,
             'top_customers': [],
-            'recent_orders': []
+            'recent_orders': [],
+            'customer_segmentation': {'high': 0, 'medium': 0, 'low': 0, 'segments': {}},
+            'aov_trend': {'trend_data': [], 'current_aov': 0, 'change_percentage': 0},
+            'churn_risk': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
         }
 
 def sync_customers(shopify_client, store):

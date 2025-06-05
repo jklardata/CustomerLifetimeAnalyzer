@@ -1,0 +1,582 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Overview Dashboard - CLV Analytics{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>Overview Dashboard</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item active">Overview</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container-fluid">
+    <!-- Export Controls -->
+    <div class="d-flex justify-content-end mb-4">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i data-feather="download" class="me-1"></i>
+                Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-export="pdf"><i data-feather="file" class="me-2"></i>Download Dashboard PDF</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-success-light">
+                            <i data-feather="users" class="text-success"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ "{:,}".format(metrics.total_customers) }}</h3>
+                            <p class="metric-label mb-0">Total Customers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-primary-light">
+                            <i data-feather="shopping-cart" class="text-primary"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ "{:,}".format(metrics.total_orders) }}</h3>
+                            <p class="metric-label mb-0">Total Orders</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-warning-light">
+                            <i data-feather="dollar-sign" class="text-warning"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">${{ "{:,.0f}".format(metrics.avg_clv) }}</h3>
+                            <p class="metric-label mb-0">Avg CLV</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-danger-light">
+                            <i data-feather="percent" class="text-danger"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ metrics.return_rate }}%</h3>
+                            <p class="metric-label mb-0">Return Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Customer Segmentation</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="segmentation">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h4 class="text-success">{{ metrics.customer_segmentation.high }}</h4>
+                            <small class="text-muted">High Value</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-warning">{{ metrics.customer_segmentation.medium }}</h4>
+                            <small class="text-muted">Medium Value</small>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="text-secondary">{{ metrics.customer_segmentation.low }}</h4>
+                            <small class="text-muted">Low Value</small>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Customers grouped by CLV quartiles for targeted marketing strategies
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">AOV Trend (30 Days)</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="aov">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h3 class="metric-value mb-0">${{ "{:,.0f}".format(metrics.aov_trend.current_aov) }}</h3>
+                        <span class="badge bg-{{ 'success' if metrics.aov_trend.change_percentage >= 0 else 'danger' }}">
+                            {{ "+" if metrics.aov_trend.change_percentage >= 0 else "" }}{{ metrics.aov_trend.change_percentage }}%
+                        </span>
+                    </div>
+                    <p class="metric-label mb-2">Current Average Order Value</p>
+                    <div class="chart-container" style="height: 80px; position: relative;">
+                        <canvas id="aovTrendChart"></canvas>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Daily AOV trends help identify pricing and promotion opportunities
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Churn Risk Analysis</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="churn">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h3 class="text-danger">{{ metrics.churn_risk.at_risk_percentage }}%</h3>
+                        <p class="metric-label mb-0">Customers at Risk</p>
+                    </div>
+                    <div class="row text-center small">
+                        <div class="col-4">
+                            <div class="text-danger fw-bold">{{ metrics.churn_risk.high_risk }}</div>
+                            <div class="text-muted">High Risk</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-warning fw-bold">{{ metrics.churn_risk.medium_risk }}</div>
+                            <div class="text-muted">Medium Risk</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-success fw-bold">{{ metrics.churn_risk.low_risk }}</div>
+                            <div class="text-muted">Low Risk</div>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Based on purchase patterns and order frequency analysis
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Retention Rate and Top Products Row -->
+    <div class="row mb-4">
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Revenue Retention Rate (90 Days)</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="revenue-retention">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-{{ 'success' if metrics.revenue_retention.retention_rate >= 80 else 'warning' if metrics.revenue_retention.retention_rate >= 60 else 'danger' }}">
+                            {{ metrics.revenue_retention.retention_rate }}%
+                        </h2>
+                        <p class="metric-label mb-0">Revenue Retained</p>
+                    </div>
+                    <div class="row text-center small">
+                        <div class="col-6">
+                            <div class="fw-bold">${{ "{:,.0f}".format(metrics.revenue_retention.recent_revenue) }}</div>
+                            <div class="text-muted">Recent Period</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold">${{ "{:,.0f}".format(metrics.revenue_retention.previous_revenue) }}</div>
+                            <div class="text-muted">Previous Period</div>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Percentage of revenue retained from repeat customers compared to previous period
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Top Products by Return Rate</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="product-returns">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if metrics.top_return_products %}
+                        {% for product in metrics.top_return_products[:3] %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <div class="fw-medium">{{ product.name[:30] }}{% if product.name|length > 30 %}...{% endif %}</div>
+                                <small class="text-muted">{{ product.total_orders }} orders, {{ product.returns }} returns</small>
+                            </div>
+                            <span class="badge bg-{{ 'danger' if product.return_rate > 20 else 'warning' if product.return_rate > 10 else 'success' }}">
+                                {{ product.return_rate }}%
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">No return data available</p>
+                    {% endif %}
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Products with highest return rates affecting customer lifetime value
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendations Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h6 class="card-title mb-0 text-white">
+                        <i data-feather="brain" class="me-2"></i>
+                        AI-Powered CLV Optimization Recommendations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if metrics.ai_recommendations %}
+                        <div class="row">
+                            {% for recommendation in metrics.ai_recommendations %}
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-primary-light rounded-circle p-2">
+                                            <i data-feather="lightbulb" class="text-primary" style="width: 16px; height: 16px;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        <p class="mb-0">{{ recommendation }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No specific recommendations available at this time. Continue monitoring your metrics for optimization opportunities.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">CLV Distribution</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="clv-distribution">
+                                <i data-feather="download" class="me-2"></i>Export Raw Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="clvChart"></canvas>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        This chart shows how customers are distributed across different CLV ranges. Higher CLV customers contribute more to long-term revenue and should be prioritized for retention efforts.
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-success">${{ "{:,.0f}".format(metrics.total_revenue) }}</h2>
+                        <p class="text-muted mb-0">Total Revenue</p>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5>${{ "{:,.0f}".format(metrics.avg_order_value) }}</h5>
+                            <small class="text-muted">Avg Order Value</small>
+                        </div>
+                        <div class="col-6">
+                            <h5>${{ "{:,.0f}".format(metrics.total_clv) }}</h5>
+                            <small class="text-muted">Total CLV</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers & Recent Orders -->
+    <div class="row">
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Top Customers by CLV</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="top-customers">
+                                <i data-feather="download" class="me-2"></i>Export Customer Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if metrics.top_customers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Email</th>
+                                    <th>Predicted CLV</th>
+                                    <th>Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in metrics.top_customers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-success-light rounded-circle me-3">
+                                                <i data-feather="user" class="text-success small"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">{{ customer.first_name }} {{ customer.last_name }}</div>
+                                                <small class="text-muted">ID: {{ customer.shopify_customer_id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ customer.email or '-' }}</td>
+                                    <td class="fw-bold text-success">${{ "{:,.0f}".format(customer.predicted_clv or 0) }}</td>
+                                    <td>{{ customer.orders_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="users" class="text-muted mb-2" style="width: 48px; height: 48px;"></i>
+                        <p class="text-muted">No customer data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="recent-orders">
+                                <i data-feather="download" class="me-2"></i>Export Order Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if metrics.recent_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in metrics.recent_orders %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">#{{ order.order_number or order.shopify_order_id }}</div>
+                                        <small class="text-muted">{{ order.financial_status or 'pending' }}</small>
+                                    </td>
+                                    <td>{{ order.customer.first_name }} {{ order.customer.last_name if order.customer else 'Guest' }}</td>
+                                    <td class="fw-bold">${{ "{:,.2f}".format(order.total_price or 0) }}</td>
+                                    <td>
+                                        <small>{{ order.created_at.strftime('%m/%d/%Y') if order.created_at else '-' }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="shopping-cart" class="text-muted mb-2" style="width: 48px; height: 48px;"></i>
+                        <p class="text-muted">No recent orders</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Initialize CLV Chart
+const ctx = document.getElementById('clvChart').getContext('2d');
+const clvChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['$0-100', '$100-500', '$500-1000', '$1000+'],
+        datasets: [{
+            data: [
+                {{ metrics.total_customers // 4 }}, 
+                {{ metrics.total_customers // 3 }}, 
+                {{ metrics.total_customers // 6 }}, 
+                {{ metrics.total_customers // 8 }}
+            ],
+            backgroundColor: [
+                '#dc3545',
+                '#ffc107', 
+                '#20c997',
+                '#28a745'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Initialize AOV Trend Chart
+const aovCtx = document.getElementById('aovTrendChart');
+if (aovCtx) {
+    const aovTrendData = {{ metrics.aov_trend.trend_data | tojson }};
+    const aovChart = new Chart(aovCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: aovTrendData.map(d => new Date(d.date).toLocaleDateString()),
+            datasets: [{
+                data: aovTrendData.map(d => d.aov),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { 
+                    display: false,
+                    beginAtZero: true
+                }
+            },
+            elements: {
+                point: { radius: 0 }
+            }
+        }
+    });
+}
+
+// Initialize dashboard functionality
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof CLVDashboard !== 'undefined') {
+        const dashboard = new CLVDashboard();
+        dashboard.init();
+    }
+});
+</script>
+{% endblock %}

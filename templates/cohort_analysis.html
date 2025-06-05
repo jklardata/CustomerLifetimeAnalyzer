@@ -1,0 +1,155 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Cohort Analysis - CLV Analytics{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>Cohort Analysis Report</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Overview</a></li>
+            <li class="breadcrumb-item">Reports</li>
+            <li class="breadcrumb-item active">Cohort Analysis</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container-fluid">
+    <!-- Coming Soon Notice -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i data-feather="users" class="text-primary" style="width: 64px; height: 64px;"></i>
+                    </div>
+                    <h3 class="mb-3">Cohort Analysis Coming Soon</h3>
+                    <p class="text-muted mb-4">
+                        We're building comprehensive cohort analysis features to help you understand customer retention 
+                        and CLV growth patterns over time. This will include:
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-primary-light rounded-circle p-2">
+                                        <i data-feather="calendar" class="text-primary" style="width: 16px; height: 16px;"></i>
+                                    </div>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <h6 class="mb-1">Retention Heatmaps</h6>
+                                    <small class="text-muted">Visual retention rates by acquisition cohort</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success-light rounded-circle p-2">
+                                        <i data-feather="trending-up" class="text-success" style="width: 16px; height: 16px;"></i>
+                                    </div>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <h6 class="mb-1">CLV Growth Tracking</h6>
+                                    <small class="text-muted">Monitor how customer value evolves over time</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-warning-light rounded-circle p-2">
+                                        <i data-feather="target" class="text-warning" style="width: 16px; height: 16px;"></i>
+                                    </div>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <h6 class="mb-1">Cohort Comparisons</h6>
+                                    <small class="text-muted">Compare performance across different time periods</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-info-light rounded-circle p-2">
+                                        <i data-feather="bar-chart" class="text-info" style="width: 16px; height: 16px;"></i>
+                                    </div>
+                                </div>
+                                <div class="ms-3 text-start">
+                                    <h6 class="mb-1">Revenue Analysis</h6>
+                                    <small class="text-muted">Track revenue contribution by cohort</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary me-3">
+                            <i data-feather="arrow-left" class="me-2"></i>Back to Overview
+                        </a>
+                        <a href="{{ url_for('orders_report') }}" class="btn btn-outline-primary">
+                            <i data-feather="shopping-cart" class="me-2"></i>View Orders Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview of Future Features -->
+    <div class="row mt-4">
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="grid" class="me-2"></i>
+                        Retention Heatmap Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="cohort-heatmap">
+                        <div class="text-center py-4">
+                            <div class="bg-light rounded p-4">
+                                <i data-feather="calendar" class="text-muted mb-2" style="width: 32px; height: 32px;"></i>
+                                <p class="text-muted mb-0">Heatmap showing customer retention rates<br>by acquisition month</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="trending-up" class="me-2"></i>
+                        CLV Growth Chart Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center py-4">
+                        <div class="bg-light rounded p-4">
+                            <i data-feather="line-chart" class="text-muted mb-2" style="width: 32px; height: 32px;"></i>
+                            <p class="text-muted mb-0">Line chart showing CLV growth<br>per cohort over time</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Initialize feather icons
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+});
+</script>
+{% endblock %}

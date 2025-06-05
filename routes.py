@@ -206,7 +206,7 @@ def callback():
 
 @app.route('/dashboard')
 def dashboard():
-    """Main dashboard with CLV analytics"""
+    """Main dashboard with CLV analytics - Overview page"""
     store_id = session.get('store_id')
     if not store_id:
         flash('Please authenticate with Shopify first.', 'warning')
@@ -221,13 +221,155 @@ def dashboard():
         # Get dashboard metrics
         metrics = get_dashboard_metrics(store)
         
-        return render_template('dashboard.html', store=store, metrics=metrics)
+        return render_template('dashboard_overview.html', store=store, metrics=metrics)
         
     except Exception as e:
         logging.error(f"Dashboard error: {str(e)}")
         logging.error(traceback.format_exc())
         flash('An error occurred loading the dashboard.', 'error')
         return redirect(url_for('index'))
+
+@app.route('/reports/orders')
+def orders_report():
+    """Orders report with filtering and sorting"""
+    store_id = session.get('store_id')
+    if not store_id:
+        return redirect(url_for('index'))
+    
+    try:
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            return redirect(url_for('logout'))
+        
+        # Get filter parameters
+        days = request.args.get('days', '90')
+        status_filter = request.args.get('status', 'all')
+        customer_type = request.args.get('customer_type', 'all')
+        sort_by = request.args.get('sort', 'date')
+        sort_order = request.args.get('order', 'desc')
+        
+        # Build query
+        query = Order.query.filter_by(store_id=store.id)
+        
+        # Apply date filter
+        if days != 'all':
+            cutoff_date = datetime.utcnow() - timedelta(days=int(days))
+            query = query.filter(Order.created_at >= cutoff_date)
+        
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter(Order.financial_status == status_filter)
+        
+        # Apply sorting
+        if sort_by == 'date':
+            if sort_order == 'desc':
+                query = query.order_by(Order.created_at.desc())
+            else:
+                query = query.order_by(Order.created_at.asc())
+        elif sort_by == 'amount':
+            if sort_order == 'desc':
+                query = query.order_by(Order.total_price.desc())
+            else:
+                query = query.order_by(Order.total_price.asc())
+        
+        orders = query.limit(100).all()
+        
+        # Calculate summary stats
+        total_orders = Order.query.filter_by(store_id=store.id).count()
+        total_revenue = db.session.query(db.func.sum(Order.total_price)).filter_by(store_id=store.id).scalar() or 0
+        avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        fulfilled_orders = Order.query.filter_by(store_id=store.id, financial_status='paid').count()
+        fulfilled_percentage = (fulfilled_orders / total_orders * 100) if total_orders > 0 else 0
+        
+        orders_data = {
+            'orders': orders,
+            'total_orders': total_orders,
+            'total_revenue': float(total_revenue),
+            'avg_order_value': float(avg_order_value),
+            'fulfilled_percentage': round(fulfilled_percentage, 1)
+        }
+        
+        return render_template('orders_report.html', store=store, orders_data=orders_data)
+        
+    except Exception as e:
+        logging.error(f"Orders report error: {str(e)}")
+        flash('An error occurred loading the orders report.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/reports/cohort-analysis')
+def cohort_analysis():
+    """Cohort analysis report"""
+    store_id = session.get('store_id')
+    if not store_id:
+        return redirect(url_for('index'))
+    
+    try:
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            return redirect(url_for('logout'))
+        
+        return render_template('cohort_analysis.html', store=store)
+        
+    except Exception as e:
+        logging.error(f"Cohort analysis error: {str(e)}")
+        flash('An error occurred loading the cohort analysis.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/reports/customer-segmentation')
+def customer_segmentation():
+    """Customer segmentation report"""
+    store_id = session.get('store_id')
+    if not store_id:
+        return redirect(url_for('index'))
+    
+    try:
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            return redirect(url_for('logout'))
+        
+        clv_calculator = CLVCalculator()
+        segmentation_data = clv_calculator.get_customer_segmentation_by_clv(store)
+        
+        # Get detailed customer data for each segment
+        customers = Customer.query.filter_by(store_id=store.id)\
+            .filter(Customer.predicted_clv.isnot(None))\
+            .order_by(Customer.predicted_clv.desc()).all()
+        
+        return render_template('customer_segmentation.html', 
+                             store=store, 
+                             segmentation_data=segmentation_data,
+                             customers=customers)
+        
+    except Exception as e:
+        logging.error(f"Customer segmentation error: {str(e)}")
+        flash('An error occurred loading customer segmentation.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/clv-recommendations')
+def clv_recommendations():
+    """CLV optimization recommendations"""
+    store_id = session.get('store_id')
+    if not store_id:
+        return redirect(url_for('index'))
+    
+    try:
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            return redirect(url_for('logout'))
+        
+        clv_calculator = CLVCalculator()
+        recommendations = clv_calculator.generate_ai_recommendations(store)
+        metrics = get_dashboard_metrics(store)
+        
+        return render_template('clv_recommendations.html', 
+                             store=store, 
+                             recommendations=recommendations,
+                             metrics=metrics)
+        
+    except Exception as e:
+        logging.error(f"CLV recommendations error: {str(e)}")
+        flash('An error occurred loading CLV recommendations.', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/sync-data')
 def sync_data():

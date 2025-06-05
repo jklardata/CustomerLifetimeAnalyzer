@@ -441,3 +441,137 @@ class CLVCalculator:
             recommendations.append("Unable to generate specific recommendations at this time")
         
         return recommendations
+    
+    def calculate_revenue_retention_rate(self, store, days=90) -> Dict:
+        """Calculate revenue retention rate comparing recent vs previous periods"""
+        try:
+            end_date = datetime.utcnow()
+            recent_start = end_date - timedelta(days=days)
+            previous_start = recent_start - timedelta(days=days)
+            
+            # Get revenue from recent period
+            recent_orders = Order.query.filter(
+                and_(
+                    Order.store_id == store.id,
+                    Order.created_at >= recent_start,
+                    Order.total_price.isnot(None)
+                )
+            ).all()
+            recent_revenue = sum(float(o.total_price) for o in recent_orders)
+            
+            # Get revenue from previous period
+            previous_orders = Order.query.filter(
+                and_(
+                    Order.store_id == store.id,
+                    Order.created_at >= previous_start,
+                    Order.created_at < recent_start,
+                    Order.total_price.isnot(None)
+                )
+            ).all()
+            previous_revenue = sum(float(o.total_price) for o in previous_orders)
+            
+            # Calculate retention rate
+            retention_rate = (recent_revenue / previous_revenue * 100) if previous_revenue > 0 else 0
+            
+            return {
+                'retention_rate': round(retention_rate, 1),
+                'recent_revenue': recent_revenue,
+                'previous_revenue': previous_revenue,
+                'recent_orders_count': len(recent_orders),
+                'previous_orders_count': len(previous_orders),
+                'period_days': days
+            }
+            
+        except Exception as e:
+            logging.error(f"Error calculating revenue retention rate: {str(e)}")
+            return {
+                'retention_rate': 0,
+                'recent_revenue': 0,
+                'previous_revenue': 0,
+                'recent_orders_count': 0,
+                'previous_orders_count': 0,
+                'period_days': days
+            }
+
+    def get_top_products_by_return_rate(self, store, limit=5) -> List[Dict]:
+        """Get top products with highest return rates"""
+        try:
+            from collections import defaultdict
+            
+            product_stats = defaultdict(lambda: {'total_orders': 0, 'returns': 0, 'name': 'Unknown Product'})
+            
+            orders = Order.query.filter(Order.store_id == store.id).all()
+            
+            for order in orders:
+                if order.shopify_data and 'line_items' in order.shopify_data:
+                    for item in order.shopify_data['line_items']:
+                        product_id = item.get('product_id', 'unknown')
+                        product_name = item.get('title', f'Product {product_id}')
+                        
+                        product_stats[product_id]['name'] = product_name
+                        product_stats[product_id]['total_orders'] += 1
+                        
+                        if order.is_returned:
+                            product_stats[product_id]['returns'] += 1
+            
+            # Calculate return rates and sort
+            products_with_rates = []
+            for product_id, stats in product_stats.items():
+                if stats['total_orders'] >= 2:  # Only include products with at least 2 orders
+                    return_rate = (stats['returns'] / stats['total_orders']) * 100
+                    products_with_rates.append({
+                        'product_id': product_id,
+                        'name': stats['name'],
+                        'return_rate': round(return_rate, 1),
+                        'total_orders': stats['total_orders'],
+                        'returns': stats['returns']
+                    })
+            
+            return sorted(products_with_rates, key=lambda x: x['return_rate'], reverse=True)[:limit]
+            
+        except Exception as e:
+            logging.error(f"Error calculating top products by return rate: {str(e)}")
+            return []
+
+    def generate_ai_recommendations(self, store) -> List[str]:
+        """Generate AI-powered CLV optimization recommendations"""
+        recommendations = []
+        
+        try:
+            # Get metrics for analysis
+            segmentation = self.get_customer_segmentation_by_clv(store)
+            churn_risk = self.calculate_churn_risk_metrics(store)
+            revenue_retention = self.calculate_revenue_retention_rate(store)
+            top_return_products = self.get_top_products_by_return_rate(store)
+            
+            # High-value customer recommendations
+            if segmentation['high'] > 0:
+                recommendations.append(f"Target {segmentation['high']} high-value customers with exclusive loyalty programs to increase retention")
+            
+            # Churn risk recommendations
+            if churn_risk['high_risk'] > 0:
+                recommendations.append(f"Implement win-back campaigns for {churn_risk['high_risk']} high-risk customers to prevent churn")
+            
+            # Revenue retention recommendations
+            if revenue_retention['retention_rate'] < 80:
+                recommendations.append(f"Revenue retention at {revenue_retention['retention_rate']}% - focus on repeat purchase incentives")
+            
+            # Product return recommendations
+            if top_return_products:
+                high_return_product = top_return_products[0]
+                if high_return_product['return_rate'] > 20:
+                    recommendations.append(f"Review '{high_return_product['name']}' with {high_return_product['return_rate']}% return rate for quality issues")
+            
+            # AOV recommendations
+            aov_trend = self.calculate_aov_trend(store)
+            if aov_trend['change_percentage'] < 0:
+                recommendations.append("AOV declining - consider bundle offers and upselling strategies")
+            
+            if not recommendations:
+                recommendations.append("Continue monitoring metrics to identify optimization opportunities")
+                
+        except Exception as e:
+            logging.error(f"Error generating AI recommendations: {str(e)}")
+            recommendations.append("Unable to generate specific recommendations at this time")
+        
+        return recommendations

@@ -304,6 +304,9 @@ def get_dashboard_metrics(store):
         customer_segmentation = clv_calculator.get_customer_segmentation_by_clv(store)
         aov_trend = clv_calculator.calculate_aov_trend(store, 30)
         churn_risk = clv_calculator.calculate_churn_risk_metrics(store)
+        revenue_retention = clv_calculator.calculate_revenue_retention_rate(store)
+        top_return_products = clv_calculator.get_top_products_by_return_rate(store)
+        ai_recommendations = clv_calculator.generate_ai_recommendations(store)
         
         # Top customers by CLV
         top_customers = Customer.query.filter_by(store_id=store.id)\
@@ -329,7 +332,10 @@ def get_dashboard_metrics(store):
             # New metrics
             'customer_segmentation': customer_segmentation,
             'aov_trend': aov_trend,
-            'churn_risk': churn_risk
+            'churn_risk': churn_risk,
+            'revenue_retention': revenue_retention,
+            'top_return_products': top_return_products,
+            'ai_recommendations': ai_recommendations
         }
         
     except Exception as e:

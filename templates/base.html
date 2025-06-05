@@ -24,8 +24,8 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-success fixed-top">
         <div class="container">
             <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                <i data-feather="trending-up" class="me-2"></i>
-                CLV Platform
+                <img src="https://clv.klardata.com/assets/logo-white.svg" alt="Klardata" height="32" class="me-2">
+                Klardata
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -34,14 +34,7 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    {% if session.store_id %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">
-                            <i data-feather="bar-chart-2" class="me-1"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    {% endif %}
+                    <!-- Dashboard link only shown when logged in -->
                 </ul>
                 
                 <ul class="navbar-nav">

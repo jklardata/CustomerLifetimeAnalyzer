@@ -211,6 +211,124 @@
         </div>
     </div>
 
+    <!-- Revenue Retention Rate and Top Products Row -->
+    <div class="row mb-4" id="revenue-retention-section">
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Revenue Retention Rate (90 Days)</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="revenue-retention">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-{{ 'success' if metrics.revenue_retention.retention_rate >= 80 else 'warning' if metrics.revenue_retention.retention_rate >= 60 else 'danger' }}">
+                            {{ metrics.revenue_retention.retention_rate }}%
+                        </h2>
+                        <p class="metric-label mb-0">Revenue Retained</p>
+                    </div>
+                    <div class="row text-center small">
+                        <div class="col-6">
+                            <div class="fw-bold">${{ "{:,.0f}".format(metrics.revenue_retention.recent_revenue) }}</div>
+                            <div class="text-muted">Recent Period</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold">${{ "{:,.0f}".format(metrics.revenue_retention.previous_revenue) }}</div>
+                            <div class="text-muted">Previous Period</div>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Percentage of revenue retained from repeat customers compared to previous period
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">Top Products by Return Rate</h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="product-returns">
+                                <i data-feather="download" class="me-2"></i>Export Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if metrics.top_return_products %}
+                        {% for product in metrics.top_return_products[:3] %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <div class="fw-medium">{{ product.name[:30] }}{% if product.name|length > 30 %}...{% endif %}</div>
+                                <small class="text-muted">{{ product.total_orders }} orders, {{ product.returns }} returns</small>
+                            </div>
+                            <span class="badge bg-{{ 'danger' if product.return_rate > 20 else 'warning' if product.return_rate > 10 else 'success' }}">
+                                {{ product.return_rate }}%
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">No return data available</p>
+                    {% endif %}
+                    <small class="text-muted mt-2 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Products with highest return rates affecting customer lifetime value
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendations Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h6 class="card-title mb-0 text-white">
+                        <i data-feather="brain" class="me-2"></i>
+                        AI-Powered CLV Optimization Recommendations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if metrics.ai_recommendations %}
+                        <div class="row">
+                            {% for recommendation in metrics.ai_recommendations %}
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-primary-light rounded-circle p-2">
+                                            <i data-feather="lightbulb" class="text-primary" style="width: 16px; height: 16px;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        <p class="mb-0">{{ recommendation }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No specific recommendations available at this time. Continue monitoring your metrics for optimization opportunities.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Charts Section -->
     <div class="row mb-4">
         <div class="col-lg-8 mb-3">
@@ -253,8 +371,18 @@
     <div class="row">
         <div class="col-lg-6 mb-3">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Top Customers by CLV</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="top-customers">
+                                <i data-feather="download" class="me-2"></i>Export Customer Data
+                            </a></li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     {% if metrics.top_customers %}

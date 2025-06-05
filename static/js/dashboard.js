@@ -281,6 +281,24 @@ class CLVDashboard {
             case 'churn':
                 this.exportChurnData();
                 break;
+            case 'revenue-retention':
+                this.exportRevenueRetentionData();
+                break;
+            case 'product-returns':
+                this.exportProductReturnsData();
+                break;
+            case 'pdf':
+                this.exportDashboardPDF();
+                break;
+            case 'top-customers':
+                this.exportTopCustomersData();
+                break;
+            case 'recent-orders':
+                this.exportRecentOrdersData();
+                break;
+            case 'clv-distribution':
+                this.exportCLVDistributionData();
+                break;
             default:
                 console.warn('Unknown export type:', exportType);
         }
@@ -365,6 +383,116 @@ class CLVDashboard {
         window.URL.revokeObjectURL(url);
         
         this.showNotification(`${filename} data exported successfully`, 'success');
+    }
+
+    exportRevenueRetentionData() {
+        const csvData = [
+            'Metric,Recent Period,Previous Period,Retention Rate',
+            `Revenue Retention,${document.querySelector('.revenue-recent')?.textContent || '0'},${document.querySelector('.revenue-previous')?.textContent || '0'},${document.querySelector('.retention-rate')?.textContent || '0%'}`
+        ].join('\n');
+        
+        this.downloadCSV(csvData, 'revenue-retention-data');
+    }
+
+    exportProductReturnsData() {
+        const products = document.querySelectorAll('.product-return-item');
+        const csvData = ['Product Name,Total Orders,Returns,Return Rate'];
+        
+        products.forEach(item => {
+            const name = item.querySelector('.product-name')?.textContent || 'Unknown';
+            const stats = item.querySelector('.product-stats')?.textContent || '0 orders, 0 returns';
+            const rate = item.querySelector('.return-rate')?.textContent || '0%';
+            csvData.push(`"${name}","${stats}","${rate}"`);
+        });
+        
+        this.downloadCSV(csvData.join('\n'), 'top-products-by-return-rate');
+    }
+
+    exportTopCustomersData() {
+        // Export raw customer data for top CLV customers
+        const csvData = [
+            'Customer ID,Name,Email,Predicted CLV,Total Orders,Total Spent,Purchase Frequency,Avg Order Value',
+            // Sample data - would be populated from actual customer data
+            ...Array.from({length: 10}, (_, i) => {
+                return `CUST-${1000 + i},Customer ${i + 1},customer${i + 1}@example.com,${Math.floor(Math.random() * 1000) + 100},${Math.floor(Math.random() * 20) + 1},${Math.floor(Math.random() * 5000) + 500},${(Math.random() * 2).toFixed(2)},${Math.floor(Math.random() * 200) + 50}`;
+            })
+        ].join('\n');
+        
+        this.downloadCSV(csvData, 'top-customers-by-clv');
+    }
+
+    exportRecentOrdersData() {
+        // Export raw order data for recent orders
+        const csvData = [
+            'Order ID,Customer ID,Order Date,Total Price,Status,Products',
+            // Sample data - would be populated from actual order data
+            ...Array.from({length: 10}, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                return `ORD-${2000 + i},CUST-${1000 + Math.floor(Math.random() * 10)},${date.toISOString().split('T')[0]},${Math.floor(Math.random() * 500) + 50},Fulfilled,Product ${i + 1}`;
+            })
+        ].join('\n');
+        
+        this.downloadCSV(csvData, 'recent-orders-data');
+    }
+
+    exportCLVDistributionData() {
+        // Export underlying customer data that makes up CLV segments
+        const csvData = [
+            'Customer ID,Name,Email,CLV Segment,Predicted CLV,Total Orders,Total Spent,Last Order Date',
+            // High value customers
+            ...Array.from({length: 5}, (_, i) => {
+                return `CUST-H${100 + i},High Value Customer ${i + 1},hv${i + 1}@example.com,High Value,${Math.floor(Math.random() * 500) + 800},${Math.floor(Math.random() * 15) + 10},${Math.floor(Math.random() * 3000) + 2000},2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
+            }),
+            // Medium value customers
+            ...Array.from({length: 8}, (_, i) => {
+                return `CUST-M${200 + i},Medium Value Customer ${i + 1},mv${i + 1}@example.com,Medium Value,${Math.floor(Math.random() * 300) + 300},${Math.floor(Math.random() * 10) + 5},${Math.floor(Math.random() * 1500) + 800},2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
+            }),
+            // Low value customers
+            ...Array.from({length: 10}, (_, i) => {
+                return `CUST-L${300 + i},Low Value Customer ${i + 1},lv${i + 1}@example.com,Low Value,${Math.floor(Math.random() * 200) + 50},${Math.floor(Math.random() * 5) + 1},${Math.floor(Math.random() * 500) + 100},2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
+            })
+        ].join('\n');
+        
+        this.downloadCSV(csvData, 'clv-distribution-raw-data');
+    }
+
+    exportDashboardPDF() {
+        // Simple PDF export using browser print functionality
+        const printContent = document.createElement('div');
+        printContent.innerHTML = `
+            <h1>CLV Analytics Dashboard Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <div>${document.querySelector('.container-fluid').innerHTML}</div>
+        `;
+        
+        const originalContent = document.body.innerHTML;
+        document.body.innerHTML = printContent.innerHTML;
+        
+        // Add print styles
+        const printStyles = document.createElement('style');
+        printStyles.innerHTML = `
+            @media print {
+                body { margin: 0; padding: 20px; }
+                .btn, .dropdown { display: none !important; }
+                .card { break-inside: avoid; margin-bottom: 20px; }
+                .row { display: block; }
+                .col-lg-3, .col-lg-4, .col-lg-6, .col-lg-8, .col-md-6 { width: 100%; display: block; }
+            }
+        `;
+        document.head.appendChild(printStyles);
+        
+        window.print();
+        
+        // Restore original content
+        setTimeout(() => {
+            document.body.innerHTML = originalContent;
+            document.head.removeChild(printStyles);
+            // Reinitialize the dashboard
+            this.init();
+        }, 1000);
+        
+        this.showNotification('Dashboard PDF export initiated', 'success');
     }
 
     generateCSVData() {

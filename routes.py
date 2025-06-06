@@ -27,25 +27,46 @@ def auth():
     if demo_mode == 'true':
         return demo_login()
     
-    # Validate shop domain
-    if not shop.endswith('.myshopify.com'):
-        shop = f"{shop}.myshopify.com"
-    
-    # Generate state for security
-    state = secrets.token_urlsafe(32)
-    session['oauth_state'] = state
-    session['shop'] = shop
-    
-    # Build OAuth URL
-    params = {
-        'client_id': app.config['SHOPIFY_API_KEY'],
-        'scope': app.config['SHOPIFY_SCOPES'],
-        'redirect_uri': url_for('callback', _external=True),
-        'state': state
-    }
-    
-    oauth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
-    return redirect(oauth_url)
+    try:
+        # Validate shop domain
+        if shop and not str(shop).endswith('.myshopify.com'):
+            shop = f"{shop}.myshopify.com"
+        
+        logging.info(f"Initiating OAuth for shop: {shop}")
+        
+        # Validate API credentials are available
+        if not app.config.get('SHOPIFY_API_KEY'):
+            logging.error("SHOPIFY_API_KEY not configured")
+            flash('Shopify API configuration missing. Please contact support.', 'error')
+            return redirect(url_for('index'))
+        
+        # Generate state for security
+        state = secrets.token_urlsafe(32)
+        session['oauth_state'] = state
+        session['shop'] = shop
+        
+        # Build OAuth URL with debugging
+        redirect_uri = url_for('callback', _external=True)
+        logging.info(f"Redirect URI: {redirect_uri}")
+        
+        params = {
+            'client_id': app.config['SHOPIFY_API_KEY'],
+            'scope': app.config['SHOPIFY_SCOPES'],
+            'redirect_uri': redirect_uri,
+            'state': state
+        }
+        
+        oauth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
+        logging.info(f"OAuth URL: {oauth_url}")
+        logging.info(f"Using API Key: {app.config['SHOPIFY_API_KEY'][:8]}...")
+        
+        return redirect(oauth_url)
+        
+    except Exception as e:
+        logging.error(f"OAuth initiation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        flash('An error occurred during authentication setup. Please try again.', 'error')
+        return redirect(url_for('index'))
 
 def demo_login():
     """Demo login for testing platform functionality"""

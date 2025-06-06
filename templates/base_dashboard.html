@@ -102,12 +102,35 @@
                     </div>
                 </li>
                 
-                <!-- CLV Optimization -->
+                <!-- CLV Optimization Section -->
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'clv_recommendations' %}active{% endif %}" href="{{ url_for('clv_recommendations') }}">
-                        <i data-feather="lightbulb" class="nav-icon"></i>
+                    <a class="nav-link collapsed" href="#clvOptimizationCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false">
+                        <i data-feather="zap" class="nav-icon"></i>
                         <span>CLV Optimization</span>
+                        <i data-feather="chevron-down" class="nav-arrow"></i>
                     </a>
+                    <div class="collapse" id="clvOptimizationCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.endpoint == 'product_clv_optimization' %}active{% endif %}" href="{{ url_for('product_clv_optimization') }}">
+                                    <i data-feather="package" class="nav-icon-sm"></i>
+                                    <span>Product Level CLV Optimization</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.endpoint == 'abandoned_cart_recovery' %}active{% endif %}" href="{{ url_for('abandoned_cart_recovery') }}">
+                                    <i data-feather="shopping-cart" class="nav-icon-sm"></i>
+                                    <span>Predictive Abandoned Cart Recovery</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.endpoint == 'clv_recommendations' %}active{% endif %}" href="{{ url_for('clv_recommendations') }}">
+                                    <i data-feather="lightbulb" class="nav-icon-sm"></i>
+                                    <span>CLV Recommendations</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
                 
                 <!-- Divider -->

@@ -2,7 +2,7 @@ import random
 from datetime import datetime, timedelta
 from decimal import Decimal
 from app import db
-from models import ShopifyStore, Customer, Order
+from models import ShopifyStore, Customer, Order, Product, OrderLineItem, AbandonedCart, AbandonedCartLineItem
 import logging
 
 class DemoDataGenerator:
@@ -32,21 +32,39 @@ class DemoDataGenerator:
         ]
         
         self.products = [
-            {"title": "Premium Organic Cotton T-Shirt", "price": 29.99, "category": "Apparel"},
-            {"title": "Wireless Bluetooth Headphones", "price": 79.99, "category": "Electronics"},
-            {"title": "Eco-Friendly Water Bottle", "price": 24.99, "category": "Lifestyle"},
-            {"title": "Artisan Coffee Blend - 1kg", "price": 34.99, "category": "Food & Beverage"},
-            {"title": "Premium Yoga Mat", "price": 49.99, "category": "Fitness"},
-            {"title": "Handcrafted Leather Wallet", "price": 89.99, "category": "Accessories"},
-            {"title": "Smart Fitness Tracker", "price": 149.99, "category": "Electronics"},
-            {"title": "Organic Skincare Set", "price": 69.99, "category": "Beauty"},
-            {"title": "Bamboo Kitchen Utensil Set", "price": 39.99, "category": "Home & Garden"},
-            {"title": "Vintage Style Sunglasses", "price": 54.99, "category": "Accessories"},
-            {"title": "Protein Powder - Vanilla", "price": 44.99, "category": "Health"},
-            {"title": "Memory Foam Pillow", "price": 59.99, "category": "Home & Garden"},
-            {"title": "Stainless Steel Watch", "price": 199.99, "category": "Accessories"},
-            {"title": "Essential Oil Diffuser", "price": 34.99, "category": "Home & Garden"},
-            {"title": "Running Shoes - Performance", "price": 129.99, "category": "Footwear"},
+            {"title": "Premium Organic Cotton T-Shirt", "price": 29.99, "category": "Apparel", "vendor": "EcoWear", "type": "T-Shirts"},
+            {"title": "Wireless Bluetooth Headphones", "price": 79.99, "category": "Electronics", "vendor": "TechSound", "type": "Audio"},
+            {"title": "Eco-Friendly Water Bottle", "price": 24.99, "category": "Lifestyle", "vendor": "GreenLife", "type": "Drinkware"},
+            {"title": "Artisan Coffee Blend - 1kg", "price": 34.99, "category": "Food & Beverage", "vendor": "CoffeeRoasters", "type": "Coffee"},
+            {"title": "Premium Yoga Mat", "price": 49.99, "category": "Fitness", "vendor": "ZenFit", "type": "Exercise Equipment"},
+            {"title": "Handcrafted Leather Wallet", "price": 89.99, "category": "Accessories", "vendor": "LeatherCraft", "type": "Wallets"},
+            {"title": "Smart Fitness Tracker", "price": 149.99, "category": "Electronics", "vendor": "FitTech", "type": "Wearables"},
+            {"title": "Organic Skincare Set", "price": 69.99, "category": "Beauty", "vendor": "NaturalGlow", "type": "Skincare"},
+            {"title": "Bamboo Kitchen Utensil Set", "price": 39.99, "category": "Home & Garden", "vendor": "EcoKitchen", "type": "Kitchenware"},
+            {"title": "Vintage Style Sunglasses", "price": 54.99, "category": "Accessories", "vendor": "RetroShades", "type": "Eyewear"},
+            {"title": "Protein Powder - Vanilla", "price": 44.99, "category": "Health", "vendor": "FitNutrition", "type": "Supplements"},
+            {"title": "Memory Foam Pillow", "price": 59.99, "category": "Home & Garden", "vendor": "SleepWell", "type": "Bedding"},
+            {"title": "Stainless Steel Watch", "price": 199.99, "category": "Accessories", "vendor": "TimeClassic", "type": "Watches"},
+            {"title": "Essential Oil Diffuser", "price": 34.99, "category": "Home & Garden", "vendor": "AromaLife", "type": "Wellness"},
+            {"title": "Running Shoes - Performance", "price": 129.99, "category": "Footwear", "vendor": "RunTech", "type": "Athletic Shoes"},
+            {"title": "Wireless Charging Pad", "price": 39.99, "category": "Electronics", "vendor": "ChargeFast", "type": "Accessories"},
+            {"title": "Ceramic Coffee Mug Set", "price": 24.99, "category": "Home & Garden", "vendor": "CeramicCraft", "type": "Drinkware"},
+            {"title": "Blue Light Blocking Glasses", "price": 49.99, "category": "Health", "vendor": "EyeProtect", "type": "Eyewear"},
+            {"title": "Resistance Band Set", "price": 19.99, "category": "Fitness", "vendor": "HomeFit", "type": "Exercise Equipment"},
+            {"title": "Natural Lip Balm Collection", "price": 15.99, "category": "Beauty", "vendor": "PureLips", "type": "Lip Care"},
+        ]
+        
+        self.return_reasons = [
+            "Defective/damaged product",
+            "Wrong size ordered",
+            "Product not as described",
+            "Changed mind",
+            "Better price found elsewhere",
+            "Quality not as expected",
+            "Shipping damage",
+            "Ordered wrong item by mistake",
+            "Product arrived too late",
+            "Incompatible with device"
         ]
         
         self.financial_statuses = ["paid", "pending", "refunded", "cancelled"]
@@ -322,6 +340,91 @@ class DemoDataGenerator:
         
         db.session.add(customer)
     
+    def generate_demo_products(self, store):
+        """Generate demo products with CLV metrics"""
+        products_created = 0
+        
+        for i, product_data in enumerate(self.products):
+            existing_product = Product.query.filter_by(
+                shopify_product_id=str(i + 1),
+                store_id=store.id
+            ).first()
+            
+            if existing_product:
+                continue
+            
+            product = Product()
+            product.shopify_product_id = str(i + 1)
+            product.store_id = store.id
+            product.title = product_data["title"]
+            product.vendor = product_data["vendor"]
+            product.product_type = product_data["type"]
+            product.price = Decimal(str(product_data["price"]))
+            product.category = product_data["category"]
+            product.inventory_quantity = random.randint(50, 500)
+            
+            # Generate CLV metrics
+            product.total_sales = Decimal(str(random.uniform(1000, 25000)))
+            product.units_sold = random.randint(20, 300)
+            product.return_rate = random.uniform(0.02, 0.15)
+            product.avg_clv_contribution = Decimal(str(random.uniform(50, 800)))
+            product.predicted_clv_impact = Decimal(str(random.uniform(60, 900)))
+            
+            db.session.add(product)
+            products_created += 1
+        
+        db.session.commit()
+        return products_created
+
+    def generate_abandoned_carts_data(self, store):
+        """Generate abandoned cart records with recovery predictions"""
+        customers = Customer.query.filter_by(store_id=store.id).all()
+        products = Product.query.filter_by(store_id=store.id).all()
+        
+        if not customers or not products:
+            return 0
+        
+        carts_created = 0
+        
+        for customer in random.sample(customers, int(len(customers) * 0.3)):
+            if random.random() < 0.6:
+                cart = AbandonedCart()
+                cart.store_id = store.id
+                cart.customer_id = customer.id
+                cart.shopify_checkout_id = f"checkout_{random.randint(100000, 999999)}"
+                cart.email = customer.email
+                cart.currency = "USD"
+                
+                # Generate cart items
+                selected_products = random.sample(products, random.randint(1, 3))
+                total_price = 0
+                
+                for product in selected_products:
+                    cart_item = AbandonedCartLineItem()
+                    cart_item.product_id = product.id
+                    cart_item.quantity = random.randint(1, 2)
+                    cart_item.price = product.price
+                    cart_item.title = product.title
+                    cart_item.variant_title = f"{product.title} - {random.choice(['Small', 'Medium', 'Large'])}"
+                    
+                    total_price += float(product.price) * cart_item.quantity
+                    cart.cart_line_items.append(cart_item)
+                
+                cart.total_price = Decimal(str(total_price))
+                cart.line_items_count = len(selected_products)
+                cart.recovery_probability = random.uniform(0.15, 0.85)
+                cart.predicted_clv_value = Decimal(str(random.uniform(50, 500)))
+                cart.recovery_email_sent = random.choice([True, False])
+                cart.recovered = random.choice([True, False]) if cart.recovery_email_sent else False
+                cart.abandoned_at = datetime.utcnow() - timedelta(days=random.randint(1, 30))
+                cart.created_at = cart.abandoned_at
+                
+                db.session.add(cart)
+                carts_created += 1
+        
+        db.session.commit()
+        return carts_created
+
     def populate_demo_data(self):
         """Populate complete demo dataset"""
         try:
@@ -331,21 +434,28 @@ class DemoDataGenerator:
             # Check if data already exists
             existing_customers = Customer.query.filter_by(store_id=store.id).count()
             existing_orders = Order.query.filter_by(store_id=store.id).count()
+            existing_products = Product.query.filter_by(store_id=store.id).count()
             
-            if existing_customers > 0 and existing_orders > 0:
-                logging.info(f"Demo data already exists: {existing_customers} customers, {existing_orders} orders")
+            if existing_customers > 0 and existing_orders > 0 and existing_products > 0:
+                logging.info(f"Demo data already exists: {existing_customers} customers, {existing_orders} orders, {existing_products} products")
                 return store, existing_customers, existing_orders
+            
+            # Generate products first
+            products_count = self.generate_demo_products(store)
             
             # Generate customers and orders
             customers_count = self.generate_demo_customers(store, 150)
             orders_count = self.generate_demo_orders(store)
+            
+            # Generate abandoned carts
+            carts_count = self.generate_abandoned_carts_data(store)
             
             # Calculate CLV for all customers
             from clv_calculator import CLVCalculator
             clv_calculator = CLVCalculator()
             clv_updates = clv_calculator.calculate_store_clv(store)
             
-            logging.info(f"Demo data populated: {customers_count} customers, {orders_count} orders, {clv_updates} CLV calculations")
+            logging.info(f"Demo data populated: {customers_count} customers, {orders_count} orders, {products_count} products, {carts_count} abandoned carts, {clv_updates} CLV calculations")
             return store, customers_count, orders_count
             
         except Exception as e:

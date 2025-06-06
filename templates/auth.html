@@ -17,32 +17,25 @@
                 
                 <div class="card border-0 shadow">
                     <div class="card-body p-4">
-                        <form action="{{ url_for('auth') }}" method="GET">
-                            <div class="mb-3">
-                                <label for="shop" class="form-label">Shopify Store URL</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control form-control-lg" id="shop" name="shop" 
-                                           placeholder="your-store-name" required>
-                                    <span class="input-group-text">.myshopify.com</span>
-                                </div>
-                                <div class="form-text">
-                                    <i data-feather="info" class="me-1"></i>
-                                    Enter your Shopify store name (e.g., "my-awesome-store")
-                                </div>
+                        <!-- Direct connection to your actual store -->
+                        <div class="store-connection mb-4">
+                            <div class="alert alert-info">
+                                <i data-feather="info" class="me-2"></i>
+                                <strong>Connecting to: clv-test-store.myshopify.com</strong>
                             </div>
                             
-                            <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
+                            <a href="{{ url_for('auth', shop='clv-test-store') }}" class="btn btn-success btn-lg w-100 mb-3">
                                 <i data-feather="external-link" class="me-2"></i>
-                                Connect with Shopify
-                            </button>
-                        </form>
+                                Connect Your Shopify Store
+                            </a>
+                        </div>
                         
                         <div class="text-center">
-                            <a href="{{ url_for('auth', demo='true') }}" class="btn btn-outline-success btn-lg w-100 mb-3">
+                            <a href="{{ url_for('auth', demo='true') }}" class="btn btn-outline-secondary btn-lg w-100 mb-3">
                                 <i data-feather="play" class="me-2"></i>
-                                Try Demo Mode
+                                Try Demo Mode Instead
                             </a>
-                            <small class="text-muted">Test the platform with sample CLV analytics</small>
+                            <small class="text-muted">Demo mode uses sample data for testing</small>
                         </div>
                         
                         <hr class="my-3">

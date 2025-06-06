@@ -47,7 +47,7 @@ def auth():
         
         # Build OAuth URL with explicit redirect URI to match whitelisted value
         # Use the exact URL that's whitelisted in your Shopify app
-        redirect_uri = "https://customer-lifetime-analyzer-justinleu1.replit.app/callback"
+        redirect_uri = "https://customer-lifetime-analyzer-justinleu1.replit.app/auth/callback"
         logging.info(f"Using explicit redirect URI: {redirect_uri}")
         
         params = {

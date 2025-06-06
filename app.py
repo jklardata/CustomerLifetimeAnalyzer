@@ -16,7 +16,7 @@ db = SQLAlchemy(model_class=Base)
 # Create the app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1, x_port=1)
 
 # Configure the database
 database_url = os.environ.get("DATABASE_URL")
@@ -31,7 +31,13 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 # Shopify API configuration
 app.config["SHOPIFY_API_KEY"] = os.environ.get("SHOPIFY_API_KEY")
 app.config["SHOPIFY_API_SECRET"] = os.environ.get("SHOPIFY_API_SECRET")
-app.config["SHOPIFY_SCOPES"] = "read_customers,read_orders,read_products"
+app.config["SHOPIFY_SCOPES"] = "read_customers,read_orders,read_products,read_analytics"
+
+# Production SSL configuration
+app.config["PREFERRED_URL_SCHEME"] = "https"
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # Debug Shopify configuration
 logging.info(f"Shopify API Key configured: {'Yes' if app.config['SHOPIFY_API_KEY'] else 'No'}")

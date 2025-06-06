@@ -28,9 +28,18 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
-# Shopify configuration
-app.config["SHOPIFY_API_KEY"] = os.environ.get("SHOPIFY_API_KEY", "")
-app.config["SHOPIFY_API_SECRET"] = os.environ.get("SHOPIFY_API_SECRET", "")
+# Shopify API configuration
+app.config["SHOPIFY_API_KEY"] = os.environ.get("SHOPIFY_API_KEY")
+app.config["SHOPIFY_API_SECRET"] = os.environ.get("SHOPIFY_API_SECRET")
+app.config["SHOPIFY_SCOPES"] = "read_customers,read_orders,read_products"
+
+# Debug Shopify configuration
+logging.info(f"Shopify API Key configured: {'Yes' if app.config['SHOPIFY_API_KEY'] else 'No'}")
+logging.info(f"Shopify API Secret configured: {'Yes' if app.config['SHOPIFY_API_SECRET'] else 'No'}")
+if app.config["SHOPIFY_API_KEY"]:
+    logging.info(f"Shopify API Key (first 8 chars): {app.config['SHOPIFY_API_KEY'][:8]}...")
+else:
+    logging.error("SHOPIFY_API_KEY environment variable not found!")
 app.config["SHOPIFY_SCOPES"] = "read_orders,read_customers,read_analytics"
 
 # Initialize the app with the extension

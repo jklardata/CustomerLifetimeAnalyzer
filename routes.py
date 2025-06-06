@@ -1,13 +1,17 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from app import app, db
-from models import ShopifyStore, Customer, Order, CLVPrediction
+from models import ShopifyStore, Customer, Order, CLVPrediction, Product, AbandonedCart
 from shopify_client import ShopifyClient
 from clv_calculator import CLVCalculator
 import logging
 import traceback
+import random
 from urllib.parse import urlencode
 import secrets
 from datetime import datetime, timedelta
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 
 @app.route('/')
 def index():
@@ -448,24 +452,37 @@ def sync_data():
         logging.info(f"Access token exists: {'Yes' if store.access_token else 'No'}")
         logging.info(f"Access token length: {len(store.access_token) if store.access_token else 0}")
         
-        # Test API connection first
+        # Test API connection and permissions
         shop_info_test = shopify_client.get_shop_info(store.shop_domain)
         if shop_info_test:
             logging.info(f"API connection successful - Shop: {shop_info_test.get('name')}")
             
-            # If store is empty, create some test customers for demonstration
-            existing_customers = Customer.query.filter_by(store_id=store.id).count()
-            if existing_customers == 0:
-                logging.info("Store appears to be empty, creating test customers for demonstration")
-                create_test_customers_in_store(store)
+            # Test customer API access specifically
+            test_customers = shopify_client.get_customers(store.shop_domain, limit=1)
+            if test_customers is not None:
+                logging.info(f"Customer API access working - returned {len(test_customers)} customers")
+            else:
+                logging.error("Customer API access failed - check read_customers scope")
+                
         else:
             logging.error("API connection failed - check access token and permissions")
+        
+        # Test database connection
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            logging.info("Database connection successful")
+        except Exception as db_error:
+            logging.error(f"Database connection error: {str(db_error)}")
         
         # Sync customers and orders
         customers_synced = sync_customers(shopify_client, store)
         orders_synced = sync_orders(shopify_client, store)
         
         logging.info(f"Sync completed - Customers: {customers_synced}, Orders: {orders_synced}")
+        
+        # Check if customers were actually saved
+        actual_customers = Customer.query.filter_by(store_id=store.id).count()
+        logging.info(f"Customers in database after sync: {actual_customers}")
         
         # Calculate CLV for all customers
         clv_calculator = CLVCalculator()

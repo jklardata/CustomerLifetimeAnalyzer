@@ -1,56 +1,120 @@
 import os
 import logging
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
+from flask import Flask, request, redirect, session, make_response, render_template_string
 from werkzeug.middleware.proxy_fix import ProxyFix
+import shopify
+from dotenv import load_dotenv
+import ssl
+import certifi
+from fix_certificates import fix_certificates
+
+# Configure SSL
+ssl_context = fix_certificates()
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
-
-# Create the app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database
-database_url = os.environ.get("DATABASE_URL")
-if not database_url:
-    raise RuntimeError("DATABASE_URL environment variable is required")
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
+# Configure Shopify
+SHOPIFY_API_KEY = os.getenv('SHOPIFY_API_KEY')
+SHOPIFY_API_SECRET = os.getenv('SHOPIFY_API_SECRET')
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key')
 
-# Shopify API configuration
-app.config["SHOPIFY_API_KEY"] = os.environ.get("SHOPIFY_API_KEY")
-app.config["SHOPIFY_API_SECRET"] = os.environ.get("SHOPIFY_API_SECRET")
-app.config["SHOPIFY_SCOPES"] = "read_customers,read_orders,read_products"
-
-# Debug Shopify configuration
-logging.info(f"Shopify API Key configured: {'Yes' if app.config['SHOPIFY_API_KEY'] else 'No'}")
-logging.info(f"Shopify API Secret configured: {'Yes' if app.config['SHOPIFY_API_SECRET'] else 'No'}")
-if app.config["SHOPIFY_API_KEY"]:
-    logging.info(f"Shopify API Key (first 8 chars): {app.config['SHOPIFY_API_KEY'][:8]}...")
+# Environment configuration
+IS_REPLIT = os.getenv('REPL_ID') is not None
+if IS_REPLIT:
+    APP_URL = "https://customer-lifetime-analyzer-justinleu1.replit.app"
 else:
-    logging.error("SHOPIFY_API_KEY environment variable not found!")
-app.config["SHOPIFY_SCOPES"] = "read_orders,read_customers,read_analytics"
+    APP_URL = "http://localhost:8000"
 
-# Initialize the app with the extension
-db.init_app(app)
+SHOPIFY_SCOPES = [
+    'read_products', 'write_products',
+    'read_orders', 'write_orders',
+    'read_customers', 'write_customers',
+    'read_analytics'
+]
 
-with app.app_context():
-    # Import models and routes
-    import models
-    import routes
+# Your store URL
+STORE_URL = "https://clv-test-store.myshopify.com"  # You can change this to your actual store URL
+
+@app.route('/')
+def index():
+    logger.debug("Starting index route")
+    return render_template_string("""
+        <h1>Welcome to CustomerLifetimeAnalyzer</h1>
+        <p>Click below to authenticate with Shopify:</p>
+        <a href="/auth/start">Start Shopify Authentication</a>
+        """)
+
+@app.route('/auth/start')
+def auth_start():
+    logger.debug("Starting auth start route")
+    shop_url = "https://clv-test-store.myshopify.com"
     
-    # Create all tables
-    db.create_all()
+    # Generate a random state value
+    state = os.urandom(16).hex()
+    session['state'] = state
     
-    logging.info("Database tables created successfully")
+    # Set up the Shopify session
+    shopify.Session.setup(api_key=SHOPIFY_API_KEY, secret=SHOPIFY_API_SECRET)
+    shopify_session = shopify.Session(shop_url, '2023-07')
+    
+    # Generate the authorization URL
+    auth_url = shopify_session.create_permission_url(
+        SHOPIFY_SCOPES,
+        request.url_root + 'auth/callback',
+        state
+    )
+    
+    logger.debug(f"Generated auth URL: {auth_url}")
+    return redirect(auth_url)
+
+@app.route('/auth/callback')
+def callback():
+    logger.debug("Starting callback route")
+    logger.debug(f"Session state: {session.get('state')}")
+    logger.debug(f"Request args: {request.args}")
+    
+    # Verify state parameter
+    if session.get('state') != request.args.get('state'):
+        logger.error("State verification failed")
+        return "State verification failed", 403
+    
+    shop_url = "https://clv-test-store.myshopify.com"
+    
+    # Set up the Shopify session
+    shopify.Session.setup(api_key=SHOPIFY_API_KEY, secret=SHOPIFY_API_SECRET)
+    shopify_session = shopify.Session(shop_url, '2023-07')
+    
+    try:
+        # Request the access token
+        access_token = shopify_session.request_token(request.args)
+        
+        # Create a new session with the access token
+        shopify_session = shopify.Session(shop_url, '2023-07', access_token)
+        shopify.ShopifyResource.activate_session(shopify_session)
+        
+        # Get the shop information
+        shop = shopify.Shop.current()
+        
+        # Return success message
+        return f"""Successfully authenticated with Shopify!<br>
+                Shop Name: {shop.name}<br>
+                Access Token: {access_token[:5]}...{access_token[-5:]}<br>
+                Shop Email: {shop.email}"""
+                
+    except Exception as e:
+        logger.error(f"Error in Shopify authentication: {e}")
+        return f"Error authenticating with Shopify: {e}"
+    finally:
+        shopify.ShopifyResource.clear_session()
+
+if __name__ == '__main__':
+    # For local development
+    app.run(host='0.0.0.0', port=8000, debug=True)

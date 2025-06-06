@@ -1,98 +1,75 @@
-from app import db
-from sqlalchemy import JSON
 from datetime import datetime
-import json
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.types import JSON
 
-class ShopifyStore(db.Model):
-    __tablename__ = 'shopify_stores'
-    
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
+class Shop(db.Model):
+    """Represents a Shopify store."""
     id = db.Column(db.Integer, primary_key=True)
-    shop_domain = db.Column(db.String(255), unique=True, nullable=False)
+    shop_name = db.Column(db.String(255), unique=True, nullable=False)
+    shop_email = db.Column(db.String(255))
     access_token = db.Column(db.String(255), nullable=False)
-    shop_id = db.Column(db.String(100), nullable=False)
-    shop_name = db.Column(db.String(255))
-    email = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    customers = db.relationship('Customer', backref='store', lazy=True, cascade='all, delete-orphan')
-    orders = db.relationship('Order', backref='store', lazy=True, cascade='all, delete-orphan')
+    last_sync = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f'<Shop {self.shop_name}>'
 
 class Customer(db.Model):
-    __tablename__ = 'customers'
-    
+    """Represents a customer with their lifetime value metrics."""
     id = db.Column(db.Integer, primary_key=True)
-    shopify_customer_id = db.Column(db.String(100), nullable=False)
-    store_id = db.Column(db.Integer, db.ForeignKey('shopify_stores.id'), nullable=False)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
+    shopify_customer_id = db.Column(db.BigInteger, unique=True, nullable=False)
     email = db.Column(db.String(255))
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
-    total_spent = db.Column(db.Numeric(10, 2), default=0)
+    first_name = db.Column(db.String(255))
+    last_name = db.Column(db.String(255))
+    total_spent = db.Column(db.Float, default=0.0)
     orders_count = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime)
+    last_order_date = db.Column(db.DateTime)
+    average_order_value = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # CLV metrics
-    predicted_clv = db.Column(db.Numeric(10, 2))
-    purchase_frequency = db.Column(db.Float)
-    avg_order_value = db.Column(db.Numeric(10, 2))
-    customer_lifespan = db.Column(db.Float)
-    return_rate = db.Column(db.Float, default=0.0)
-    
-    # Raw Shopify data
-    shopify_data = db.Column(JSON)
-    
+
     # Relationships
-    orders = db.relationship('Order', backref='customer', lazy=True)
-    
-    __table_args__ = (db.UniqueConstraint('shopify_customer_id', 'store_id'),)
+    shop = db.relationship('Shop', backref=db.backref('customers', lazy=True))
+
+    def __repr__(self):
+        return f'<Customer {self.email}>'
 
 class Order(db.Model):
-    __tablename__ = 'orders'
-    
+    """Represents a customer order."""
     id = db.Column(db.Integer, primary_key=True)
-    shopify_order_id = db.Column(db.String(100), nullable=False)
-    store_id = db.Column(db.Integer, db.ForeignKey('shopify_stores.id'), nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
-    
-    # Order details
-    order_number = db.Column(db.String(100))
-    total_price = db.Column(db.Numeric(10, 2))
-    subtotal_price = db.Column(db.Numeric(10, 2))
-    total_tax = db.Column(db.Numeric(10, 2))
-    currency = db.Column(db.String(10))
-    financial_status = db.Column(db.String(50))
-    fulfillment_status = db.Column(db.String(50))
-    
-    # Timestamps
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
-    processed_at = db.Column(db.DateTime)
-    
-    # Return tracking
-    is_returned = db.Column(db.Boolean, default=False)
-    return_reason = db.Column(db.String(255))
-    
-    # Raw Shopify data
-    shopify_data = db.Column(JSON)
-    
-    __table_args__ = (db.UniqueConstraint('shopify_order_id', 'store_id'),)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    shopify_order_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    order_number = db.Column(db.String(50))
+    total_price = db.Column(db.Float, nullable=False)
+    order_date = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    shop = db.relationship('Shop', backref=db.backref('orders', lazy=True))
+    customer = db.relationship('Customer', backref=db.backref('orders', lazy=True))
+
+    def __repr__(self):
+        return f'<Order {self.order_number}>'
 
 class CLVPrediction(db.Model):
-    __tablename__ = 'clv_predictions'
-    
+    """Represents a customer lifetime value prediction."""
     id = db.Column(db.Integer, primary_key=True)
-    store_id = db.Column(db.Integer, db.ForeignKey('shopify_stores.id'), nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
-    
-    predicted_clv = db.Column(db.Numeric(10, 2))
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    predicted_value = db.Column(db.Float, nullable=False)
     confidence_score = db.Column(db.Float)
     prediction_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Features used for prediction
     features = db.Column(JSON)
-    model_version = db.Column(db.String(50))
     
-    store = db.relationship('ShopifyStore', backref='clv_predictions')
-    customer = db.relationship('Customer', backref='clv_predictions')
+    # Relationships
+    customer = db.relationship('Customer', backref=db.backref('predictions', lazy=True))
+
+    def __repr__(self):
+        return f'<CLVPrediction {self.customer_id}>'

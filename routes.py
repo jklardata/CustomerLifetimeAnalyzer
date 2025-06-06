@@ -258,7 +258,10 @@ def orders_report():
         
         # Apply status filter
         if status_filter != 'all':
-            query = query.filter(Order.financial_status == status_filter)
+            if status_filter == 'fulfilled':
+                query = query.filter(Order.financial_status == 'paid')
+            else:
+                query = query.filter(Order.financial_status == status_filter)
         
         # Apply sorting
         if sort_by == 'date':

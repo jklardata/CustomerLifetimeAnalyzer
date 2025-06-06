@@ -1,0 +1,555 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Customer Lifetime Value (CLV) Report - CLV Analytics{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1>Customer Lifetime Value (CLV) Report</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Overview</a></li>
+            <li class="breadcrumb-item">Reports</li>
+            <li class="breadcrumb-item active">CLV Report</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container-fluid">
+    <!-- Export Controls -->
+    <div class="d-flex justify-content-end mb-4">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i data-feather="download" class="me-1"></i>
+                Export CLV Data
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-export="clv-heatmap"><i data-feather="grid" class="me-2"></i>CLV Heatmap Data</a></li>
+                <li><a class="dropdown-item" href="#" data-export="retention-table"><i data-feather="users" class="me-2"></i>Retention Table</a></li>
+                <li><a class="dropdown-item" href="#" data-export="product-clv"><i data-feather="package" class="me-2"></i>Product CLV Analysis</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- CLV Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-success-light">
+                            <i data-feather="trending-up" class="text-success"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">${{ "{:,.0f}".format(clv_data.avg_clv) }}</h3>
+                            <p class="metric-label mb-0">Average CLV</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-primary-light">
+                            <i data-feather="users" class="text-primary"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ clv_data.total_customers }}</h3>
+                            <p class="metric-label mb-0">Total Customers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-warning-light">
+                            <i data-feather="percent" class="text-warning"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ clv_data.retention_rate }}%</h3>
+                            <p class="metric-label mb-0">12-Month Retention</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-info-light">
+                            <i data-feather="calendar" class="text-info"></i>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="metric-value mb-0">{{ clv_data.avg_lifespan }}</h3>
+                            <p class="metric-label mb-0">Avg Lifespan (months)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLV Heatmap Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="grid" class="me-2"></i>
+                        CLV Heatmap by Acquisition Month
+                    </h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="clv-heatmap">
+                                <i data-feather="download" class="me-2"></i>Export Heatmap Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="cohort-heatmap">
+                        <div class="table-responsive">
+                            <table class="table table-bordered mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>First Order Month</th>
+                                        <th>New Customers</th>
+                                        <th>Month 0</th>
+                                        <th>Month 1</th>
+                                        <th>Month 2</th>
+                                        <th>Month 3</th>
+                                        <th>Month 6</th>
+                                        <th>Month 12</th>
+                                        <th>Predicted CLV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cohort in clv_data.cohort_heatmap %}
+                                    <tr>
+                                        <td class="fw-medium">{{ cohort.month }}</td>
+                                        <td class="fw-medium">{{ cohort.new_customers }}</td>
+                                        <td class="cohort-cell {{ cohort.month_0_class }}">
+                                            ${{ "{:,.0f}".format(cohort.month_0_clv) }}
+                                        </td>
+                                        <td class="cohort-cell {{ cohort.month_1_class }}">
+                                            {% if cohort.month_1_clv %}
+                                                ${{ "{:,.0f}".format(cohort.month_1_clv) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="cohort-cell {{ cohort.month_2_class }}">
+                                            {% if cohort.month_2_clv %}
+                                                ${{ "{:,.0f}".format(cohort.month_2_clv) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="cohort-cell {{ cohort.month_3_class }}">
+                                            {% if cohort.month_3_clv %}
+                                                ${{ "{:,.0f}".format(cohort.month_3_clv) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="cohort-cell {{ cohort.month_6_class }}">
+                                            {% if cohort.month_6_clv %}
+                                                ${{ "{:,.0f}".format(cohort.month_6_clv) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="cohort-cell {{ cohort.month_12_class }}">
+                                            {% if cohort.month_12_clv %}
+                                                ${{ "{:,.0f}".format(cohort.month_12_clv) }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="fw-bold text-primary">
+                                            ${{ "{:,.0f}".format(cohort.predicted_clv) }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-3 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Heatmap shows average CLV progression by months since first order. Colors indicate performance: 
+                        <span class="cohort-cell high px-2 py-1 mx-1">High</span>
+                        <span class="cohort-cell medium px-2 py-1 mx-1">Medium</span>
+                        <span class="cohort-cell low px-2 py-1 mx-1">Low</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retention Table Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="users" class="me-2"></i>
+                        Cohort Retention Table
+                    </h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="retention-table">
+                                <i data-feather="download" class="me-2"></i>Export Retention Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Acquisition Month</th>
+                                    <th>Initial Customers</th>
+                                    <th>Month 1</th>
+                                    <th>Month 2</th>
+                                    <th>Month 3</th>
+                                    <th>Month 6</th>
+                                    <th>Month 12</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for retention in clv_data.retention_table %}
+                                <tr>
+                                    <td class="fw-medium">{{ retention.month }}</td>
+                                    <td class="fw-medium">{{ retention.initial_customers }}</td>
+                                    <td class="text-center">
+                                        {% if retention.month_1_retention is not none %}
+                                            <span class="badge bg-{{ 'success' if retention.month_1_retention >= 70 else 'warning' if retention.month_1_retention >= 50 else 'danger' }}">
+                                                {{ retention.month_1_retention }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if retention.month_2_retention is not none %}
+                                            <span class="badge bg-{{ 'success' if retention.month_2_retention >= 60 else 'warning' if retention.month_2_retention >= 40 else 'danger' }}">
+                                                {{ retention.month_2_retention }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if retention.month_3_retention is not none %}
+                                            <span class="badge bg-{{ 'success' if retention.month_3_retention >= 50 else 'warning' if retention.month_3_retention >= 30 else 'danger' }}">
+                                                {{ retention.month_3_retention }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if retention.month_6_retention is not none %}
+                                            <span class="badge bg-{{ 'success' if retention.month_6_retention >= 40 else 'warning' if retention.month_6_retention >= 25 else 'danger' }}">
+                                                {{ retention.month_6_retention }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if retention.month_12_retention is not none %}
+                                            <span class="badge bg-{{ 'success' if retention.month_12_retention >= 30 else 'warning' if retention.month_12_retention >= 20 else 'danger' }}">
+                                                {{ retention.month_12_retention }}%
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted mt-3 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Retention percentages show how many customers from each acquisition month made repeat purchases.
+                        <span class="badge bg-success ms-2">Excellent (>70%)</span>
+                        <span class="badge bg-warning ms-1">Good (30-70%)</span>
+                        <span class="badge bg-danger ms-1">Needs Attention (<30%)</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product CLV Analysis Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="package" class="me-2"></i>
+                        Product CLV Analysis
+                    </h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                            <i data-feather="more-horizontal"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-export="product-clv">
+                                <i data-feather="download" class="me-2"></i>Export Product CLV Data
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Orders</th>
+                                    <th>Avg Order Value</th>
+                                    <th>Customer Retention</th>
+                                    <th>Historical CLV</th>
+                                    <th>Predicted CLV</th>
+                                    <th>CLV Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in clv_data.product_clv %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ product.name }}</div>
+                                        <small class="text-muted">SKU: {{ product.sku }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ product.category }}</span>
+                                    </td>
+                                    <td class="fw-medium">{{ product.total_orders }}</td>
+                                    <td>${{ "{:,.2f}".format(product.avg_order_value) }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if product.retention_rate >= 60 else 'warning' if product.retention_rate >= 40 else 'danger' }}">
+                                            {{ product.retention_rate }}%
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">${{ "{:,.0f}".format(product.historical_clv) }}</td>
+                                    <td class="fw-bold text-primary">${{ "{:,.0f}".format(product.predicted_clv) }}</td>
+                                    <td>
+                                        {% set growth = ((product.predicted_clv - product.historical_clv) / product.historical_clv * 100) if product.historical_clv > 0 else 0 %}
+                                        <span class="badge bg-{{ 'success' if growth >= 0 else 'danger' }}">
+                                            {{ "+" if growth >= 0 else "" }}{{ "{:.1f}".format(growth) }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted mt-3 d-block">
+                        <i data-feather="info" class="me-1"></i>
+                        Product CLV analysis shows how different products contribute to customer lifetime value over time.
+                        Focus on products with high retention rates and positive CLV growth for maximum impact.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLV Trends Chart -->
+    <div class="row">
+        <div class="col-lg-8 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="trending-up" class="me-2"></i>
+                        CLV Trends Over Time
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="clvTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="pie-chart" class="me-2"></i>
+                        CLV Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="clvDistributionChart"></canvas>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Customer segments by CLV value</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Initialize CLV Trends Chart
+const trendsCtx = document.getElementById('clvTrendsChart').getContext('2d');
+const clvTrendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: {{ clv_data.trend_labels | tojson }},
+        datasets: [
+            {
+                label: 'Historical CLV',
+                data: {{ clv_data.historical_trend | tojson }},
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'Predicted CLV',
+                data: {{ clv_data.predicted_trend | tojson }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top'
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'Month'
+                }
+            },
+            y: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'CLV ($)'
+                },
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        }
+    }
+});
+
+// Initialize CLV Distribution Chart
+const distributionCtx = document.getElementById('clvDistributionChart').getContext('2d');
+const clvDistributionChart = new Chart(distributionCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['$0-$100', '$100-$500', '$500-$1000', '$1000+'],
+        datasets: [{
+            data: {{ clv_data.distribution_data | tojson }},
+            backgroundColor: [
+                '#dc3545',
+                '#ffc107', 
+                '#20c997',
+                '#28a745'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': ' + context.parsed + ' customers (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Export functionality
+document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-export]')) {
+        e.preventDefault();
+        const exportType = e.target.closest('[data-export]').getAttribute('data-export');
+        exportCLVData(exportType);
+    }
+});
+
+function exportCLVData(type) {
+    const params = new URLSearchParams();
+    params.append('export', type);
+    
+    const link = document.createElement('a');
+    link.href = window.location.pathname + '?' + params.toString();
+    link.download = `clv-report-${type}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Initialize feather icons
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+});
+</script>
+{% endblock %}

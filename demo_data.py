@@ -30,6 +30,27 @@ class DemoDataGenerator:
             "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
             "aol.com", "protonmail.com", "mail.com"
         ]
+        
+        self.products = [
+            {"title": "Premium Organic Cotton T-Shirt", "price": 29.99, "category": "Apparel"},
+            {"title": "Wireless Bluetooth Headphones", "price": 79.99, "category": "Electronics"},
+            {"title": "Eco-Friendly Water Bottle", "price": 24.99, "category": "Lifestyle"},
+            {"title": "Artisan Coffee Blend - 1kg", "price": 34.99, "category": "Food & Beverage"},
+            {"title": "Premium Yoga Mat", "price": 49.99, "category": "Fitness"},
+            {"title": "Handcrafted Leather Wallet", "price": 89.99, "category": "Accessories"},
+            {"title": "Smart Fitness Tracker", "price": 149.99, "category": "Electronics"},
+            {"title": "Organic Skincare Set", "price": 69.99, "category": "Beauty"},
+            {"title": "Bamboo Kitchen Utensil Set", "price": 39.99, "category": "Home & Garden"},
+            {"title": "Vintage Style Sunglasses", "price": 54.99, "category": "Accessories"},
+            {"title": "Protein Powder - Vanilla", "price": 44.99, "category": "Health"},
+            {"title": "Memory Foam Pillow", "price": 59.99, "category": "Home & Garden"},
+            {"title": "Stainless Steel Watch", "price": 199.99, "category": "Accessories"},
+            {"title": "Essential Oil Diffuser", "price": 34.99, "category": "Home & Garden"},
+            {"title": "Running Shoes - Performance", "price": 129.99, "category": "Footwear"},
+        ]
+        
+        self.financial_statuses = ["paid", "pending", "refunded", "cancelled"]
+        self.fulfillment_statuses = ["fulfilled", "pending", "partial", "unfulfilled"]
     
     def create_demo_store(self):
         """Create or get the demo store"""
@@ -157,7 +178,8 @@ class DemoDataGenerator:
                         "customer": {
                             "id": customer.shopify_customer_id,
                             "email": customer.email
-                        }
+                        },
+                        "line_items": self.generate_line_items(order_total)
                     }
                 )
                 
@@ -170,9 +192,135 @@ class DemoDataGenerator:
             customer.orders_count = num_orders
             customer.total_spent = total_spent
         
+        # Generate abandoned carts for 10% of customers
+        abandoned_customers = random.sample(customers, max(1, len(customers) // 10))
+        for customer in abandoned_customers:
+            self.generate_abandoned_cart(customer)
+        
         db.session.commit()
-        logging.info(f"Created {orders_created} demo orders")
+        logging.info(f"Created {orders_created} demo orders with product data and abandoned carts")
         return orders_created
+    
+    def generate_line_items(self, order_total):
+        """Generate realistic line items for an order"""
+        # Determine number of items (1-4, weighted towards fewer items)
+        num_items = random.choices([1, 2, 3, 4], weights=[50, 30, 15, 5])[0]
+        
+        # Select random products
+        selected_products = random.sample(self.products, min(num_items, len(self.products)))
+        
+        line_items = []
+        remaining_total = order_total
+        
+        for i, product in enumerate(selected_products):
+            # For the last item, use remaining total; otherwise distribute proportionally
+            if i == len(selected_products) - 1:
+                item_total = remaining_total
+            else:
+                # Allocate 20-60% of remaining total to this item
+                allocation_pct = random.uniform(0.2, 0.6)
+                item_total = remaining_total * allocation_pct
+                remaining_total -= item_total
+            
+            # Calculate quantity and price
+            base_price = product["price"]
+            max_qty = max(1, int(item_total / base_price))
+            quantity = random.randint(1, min(3, max_qty))
+            
+            # Adjust price to match allocated total
+            if quantity > 0:
+                adjusted_price = round(item_total / quantity, 2)
+            else:
+                adjusted_price = base_price
+                quantity = 1
+            
+            line_items.append({
+                "id": random.randint(100000, 999999),
+                "product_id": random.randint(10000, 99999),
+                "variant_id": random.randint(10000, 99999),
+                "title": product["title"],
+                "variant_title": self.get_variant_title(product["category"]),
+                "vendor": "Demo Store",
+                "quantity": quantity,
+                "price": str(adjusted_price),
+                "grams": random.randint(100, 2000),
+                "sku": f"SKU-{random.randint(1000, 9999)}",
+                "variant_inventory_management": "shopify",
+                "properties": [],
+                "product_exists": True,
+                "fulfillable_quantity": quantity,
+                "fulfillment_service": "manual",
+                "total_discount": "0.00",
+                "fulfillment_status": None,
+                "tax_lines": [],
+                "name": f"{product['title']} - {self.get_variant_title(product['category'])}",
+                "custom": False,
+                "gift_card": False,
+                "taxable": True,
+                "tip": False
+            })
+        
+        return line_items
+    
+    def get_variant_title(self, category):
+        """Get appropriate variant title based on product category"""
+        variants = {
+            "Apparel": ["Small", "Medium", "Large", "X-Large"],
+            "Footwear": ["Size 7", "Size 8", "Size 9", "Size 10", "Size 11"],
+            "Electronics": ["Black", "White", "Silver"],
+            "Beauty": ["Default"],
+            "Health": ["Vanilla", "Chocolate", "Strawberry"],
+            "Accessories": ["Black", "Brown", "Silver"]
+        }
+        
+        category_variants = variants.get(category, ["Default"])
+        return random.choice(category_variants)
+    
+    def generate_abandoned_cart(self, customer):
+        """Generate abandoned cart data for a customer"""
+        # Select 1-3 products for abandoned cart
+        num_items = random.choices([1, 2, 3], weights=[60, 30, 10])[0]
+        selected_products = random.sample(self.products, min(num_items, len(self.products)))
+        
+        line_items = []
+        total_amount = 0
+        
+        for product in selected_products:
+            quantity = random.choices([1, 2], weights=[80, 20])[0]
+            item_price = product["price"]
+            line_total = item_price * quantity
+            total_amount += line_total
+            
+            line_items.append({
+                "id": random.randint(100000, 999999),
+                "product_id": random.randint(10000, 99999),
+                "title": product["title"],
+                "quantity": quantity,
+                "price": str(item_price),
+                "variant_title": self.get_variant_title(product["category"]),
+                "vendor": "Demo Store",
+                "sku": f"SKU-{random.randint(1000, 9999)}"
+            })
+        
+        # Abandoned cart created 1-7 days ago
+        abandoned_date = datetime.utcnow() - timedelta(days=random.randint(1, 7))
+        
+        # Store abandoned cart info in customer's shopify_data
+        if not customer.shopify_data:
+            customer.shopify_data = {}
+        
+        customer.shopify_data["abandoned_checkout"] = {
+            "id": f"abandoned_{random.randint(100000, 999999)}",
+            "created_at": abandoned_date.isoformat(),
+            "updated_at": abandoned_date.isoformat(),
+            "line_items": line_items,
+            "total_price": str(total_amount),
+            "currency": "USD",
+            "customer_locale": "en",
+            "abandoned_checkout_url": f"https://demo-store.myshopify.com/cart/c/{random.randint(100000, 999999)}"
+        }
+        
+        db.session.add(customer)
     
     def populate_demo_data(self):
         """Populate complete demo dataset"""

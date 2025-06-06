@@ -52,6 +52,11 @@ class ShopifyClient:
             'Content-Type': 'application/json'
         }
         
+        logging.info(f"Making request to: {url}")
+        logging.info(f"Access token available: {'Yes' if self.access_token else 'No'}")
+        if self.access_token:
+            logging.info(f"Access token starts with: {self.access_token[:10]}...")
+        
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -60,6 +65,9 @@ class ShopifyClient:
                 
                 response = requests.get(url, headers=headers, params=params or {}, timeout=30)
                 
+                logging.info(f"Response status code: {response.status_code}")
+                logging.info(f"Response headers: {dict(response.headers)}")
+                
                 # Handle rate limiting
                 if response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', 2))
@@ -67,8 +75,13 @@ class ShopifyClient:
                     time.sleep(retry_after)
                     continue
                 
+                if response.status_code != 200:
+                    logging.error(f"API error: {response.status_code} - {response.text}")
+                    
                 response.raise_for_status()
-                return response.json()
+                json_data = response.json()
+                logging.info(f"Response data keys: {list(json_data.keys()) if json_data else 'None'}")
+                return json_data
                 
             except requests.exceptions.RequestException as e:
                 logging.error(f"Request error (attempt {attempt + 1}): {str(e)}")
@@ -93,9 +106,17 @@ class ShopifyClient:
         params = {'limit': limit}
         
         try:
+            logging.info(f"Requesting customers from {shop_domain} with limit {limit}")
             while True:
                 result = self.make_request(shop_domain, 'customers.json', params)
-                if not result or 'customers' not in result:
+                logging.info(f"API response received: {result is not None}")
+                
+                if not result:
+                    logging.warning("No result from customers API call")
+                    break
+                    
+                if 'customers' not in result:
+                    logging.warning(f"No 'customers' key in result. Keys: {list(result.keys()) if result else 'None'}")
                     break
                 
                 batch = result['customers']

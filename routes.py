@@ -443,9 +443,16 @@ def sync_data():
         shopify_client = ShopifyClient(app.config['SHOPIFY_API_KEY'], app.config['SHOPIFY_API_SECRET'])
         shopify_client.set_access_token(store.access_token)
         
+        # Add detailed logging for debugging
+        logging.info(f"Starting sync for store: {store.shop_domain}")
+        logging.info(f"Access token exists: {'Yes' if store.access_token else 'No'}")
+        logging.info(f"Access token length: {len(store.access_token) if store.access_token else 0}")
+        
         # Sync customers and orders
         customers_synced = sync_customers(shopify_client, store)
         orders_synced = sync_orders(shopify_client, store)
+        
+        logging.info(f"Sync completed - Customers: {customers_synced}, Orders: {orders_synced}")
         
         # Calculate CLV for all customers
         clv_calculator = CLVCalculator()
@@ -846,7 +853,14 @@ def clear_store_data(store):
 def sync_customers(shopify_client, store):
     """Sync customers from Shopify"""
     try:
+        logging.info(f"Fetching customers for shop: {store.shop_domain}")
         customers_data = shopify_client.get_customers(store.shop_domain)
+        logging.info(f"API returned {len(customers_data) if customers_data else 0} customers")
+        
+        if not customers_data:
+            logging.warning("No customer data returned from Shopify API")
+            return 0
+            
         customers_synced = 0
         
         for customer_data in customers_data:
@@ -882,7 +896,14 @@ def sync_customers(shopify_client, store):
 def sync_orders(shopify_client, store):
     """Sync orders from Shopify"""
     try:
+        logging.info(f"Fetching orders for shop: {store.shop_domain}")
         orders_data = shopify_client.get_orders(store.shop_domain)
+        logging.info(f"API returned {len(orders_data) if orders_data else 0} orders")
+        
+        if not orders_data:
+            logging.warning("No order data returned from Shopify API")
+            return 0
+            
         orders_synced = 0
         
         for order_data in orders_data:

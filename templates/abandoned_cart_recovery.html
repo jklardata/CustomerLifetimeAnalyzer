@@ -1,0 +1,516 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Predictive Abandoned Cart Recovery{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 mb-0">Predictive Abandoned Cart Recovery</h2>
+            <p class="text-muted">AI-powered cart recovery predictions and targeted email campaigns</p>
+        </div>
+        <div>
+            <button class="btn btn-success" onclick="exportCartData()">
+                <i data-feather="download" class="me-2"></i>Export Data
+            </button>
+        </div>
+    </div>
+
+    <!-- ML Model Status -->
+    {% if recovery_model_data.model_trained %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="card-title mb-0">
+                                <i data-feather="cpu" class="me-2"></i>
+                                Random Forest Recovery Model Active
+                            </h5>
+                            <p class="card-text mb-0">
+                                Model accuracy: {{ "%.1f"|format(recovery_model_data.model_score * 100) }}% | 
+                                Predicting recovery probability for {{ abandoned_carts|length }} abandoned carts
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <i data-feather="check-circle" style="width: 3rem; height: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Insufficient Data for ML Model
+                    </h5>
+                    <p class="card-text mb-0">
+                        Need more abandoned cart data to train the Random Forest model for recovery predictions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-danger">
+                            <i data-feather="shopping-cart"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ recovery_metrics.total_carts or 0 }}</div>
+                            <div class="metric-label">Total Abandoned Carts</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-success">
+                            <i data-feather="check-circle"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ "%.1f"|format(recovery_metrics.recovery_rate or 0) }}%</div>
+                            <div class="metric-label">Recovery Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-info">
+                            <i data-feather="dollar-sign"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">${{ "%.0f"|format(recovery_metrics.total_value or 0) }}</div>
+                            <div class="metric-label">Total Cart Value</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-warning">
+                            <i data-feather="target"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ recovery_metrics.high_value_carts or 0 }}</div>
+                            <div class="metric-label">High-Value Carts (>$100)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recovery Feature Importance -->
+        {% if recovery_model_data.model_trained %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="brain" class="me-2"></i>
+                        Recovery Prediction Features
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="recoveryFeatureChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recovery Performance -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="pie-chart" class="me-2"></i>
+                        Recovery Performance Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="recoveryMetricsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- High-Priority Recovery Targets -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="target" class="me-2"></i>
+                        High-Priority Recovery Targets
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Cart Value</th>
+                                    <th>CLV</th>
+                                    <th>Recovery Probability</th>
+                                    <th>Days Abandoned</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cart in abandoned_carts[:5] %}
+                                {% if cart.customer and cart.total_price > 50 %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ cart.customer.first_name }} {{ cart.customer.last_name }}</strong><br>
+                                        <small class="text-muted">{{ cart.email }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {% if cart.total_price > 100 %}text-success{% else %}text-warning{% endif %}">
+                                            ${{ "%.2f"|format(cart.total_price) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-info fw-bold">${{ "%.0f"|format(cart.customer.predicted_clv or 0) }}</span>
+                                    </td>
+                                    <td>
+                                        {% if cart.recovery_probability %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-{% if cart.recovery_probability > 0.7 %}success{% elif cart.recovery_probability > 0.4 %}warning{% else %}danger{% endif %}" 
+                                                 style="width: {{ (cart.recovery_probability * 100)|round }}%">
+                                                {{ "%.0f"|format(cart.recovery_probability * 100) }}%
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cart.abandoned_at %}
+                                        {{ ((current_date() - cart.abandoned_at).days) }} days
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not cart.recovery_email_sent %}
+                                        <button class="btn btn-sm btn-primary" onclick="sendRecoveryEmail('{{ cart.id }}')">
+                                            Send Email
+                                        </button>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Email Sent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Recommendations -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="lightbulb" class="me-2"></i>
+                        AI Recovery Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for rec in recommendations %}
+                    <div class="recommendation-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">{{ rec.title }}</h6>
+                            <span class="badge bg-{{ 'danger' if rec.priority == 'high' else 'warning' if rec.priority == 'medium' else 'info' }}">
+                                {{ rec.priority.title() }}
+                            </span>
+                        </div>
+                        <p class="mb-2 text-muted">{{ rec.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-success fw-bold">{{ rec.impact }}</small>
+                            <button class="btn btn-sm btn-success" onclick="implementRecoveryAction('{{ rec.type }}')">
+                                {{ rec.action }}
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- All Abandoned Carts Table -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i data-feather="list" class="me-2"></i>
+                            All Abandoned Carts
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="filterHighValue()">
+                                High Value Only
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterUncontacted()">
+                                Uncontacted Only
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="abandonedCartsTable">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Cart Value</th>
+                                    <th>Items</th>
+                                    <th>Customer CLV</th>
+                                    <th>Recovery Probability</th>
+                                    <th>Days Abandoned</th>
+                                    <th>Email Sent</th>
+                                    <th>Recovered</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cart in abandoned_carts %}
+                                <tr>
+                                    <td>
+                                        {% if cart.customer %}
+                                        <strong>{{ cart.customer.first_name }} {{ cart.customer.last_name }}</strong><br>
+                                        <small class="text-muted">{{ cart.email }}</small>
+                                        {% else %}
+                                        <span class="text-muted">Guest</span><br>
+                                        <small class="text-muted">{{ cart.email }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {% if cart.total_price > 100 %}text-success{% elif cart.total_price > 50 %}text-warning{% else %}text-muted{% endif %}">
+                                            ${{ "%.2f"|format(cart.total_price) }}
+                                        </span>
+                                    </td>
+                                    <td>{{ cart.line_items_count }}</td>
+                                    <td>
+                                        {% if cart.customer and cart.customer.predicted_clv %}
+                                        <span class="text-info fw-bold">${{ "%.0f"|format(cart.customer.predicted_clv) }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if recovery_model_data.model_trained and cart.recovery_probability %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-{% if cart.recovery_probability > 0.7 %}success{% elif cart.recovery_probability > 0.4 %}warning{% else %}danger{% endif %}" 
+                                                 style="width: {{ (cart.recovery_probability * 100)|round }}%">
+                                                {{ "%.0f"|format(cart.recovery_probability * 100) }}%
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cart.abandoned_at %}
+                                        {{ ((current_date() - cart.abandoned_at).days) }} days
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cart.recovery_email_sent %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cart.recovered %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if not cart.recovery_email_sent %}
+                                            <button class="btn btn-sm btn-primary" onclick="sendRecoveryEmail('{{ cart.id }}')">
+                                                Email
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-outline-info" onclick="viewCart('{{ cart.id }}')">
+                                                View
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Recovery Feature Importance Chart
+{% if recovery_model_data.model_trained %}
+const recoveryFeatureCtx = document.getElementById('recoveryFeatureChart').getContext('2d');
+new Chart(recoveryFeatureCtx, {
+    type: 'horizontalBar',
+    data: {
+        labels: [{% for feature, importance in recovery_model_data.feature_importance %}'{{ feature }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Feature Importance',
+            data: [{% for feature, importance in recovery_model_data.feature_importance %}{{ importance }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Importance Score'
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Recovery Metrics Chart
+const recoveryMetricsCtx = document.getElementById('recoveryMetricsChart').getContext('2d');
+new Chart(recoveryMetricsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Recovered', 'Not Recovered'],
+        datasets: [{
+            data: [{{ recovery_metrics.recovered_carts or 0 }}, {{ (recovery_metrics.total_carts or 0) - (recovery_metrics.recovered_carts or 0) }}],
+            backgroundColor: [
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(255, 99, 132, 0.8)'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Export Cart Data Function
+function exportCartData() {
+    let csvData = 'Customer,Email,Cart Value,Items,Customer CLV,Recovery Probability,Days Abandoned,Email Sent,Recovered\n';
+    
+    {% for cart in abandoned_carts %}
+    csvData += '"{% if cart.customer %}{{ cart.customer.first_name }} {{ cart.customer.last_name }}{% else %}Guest{% endif %}",';
+    csvData += '"{{ cart.email }}","{{ cart.total_price }}","{{ cart.line_items_count }}",';
+    csvData += '"{% if cart.customer and cart.customer.predicted_clv %}{{ cart.customer.predicted_clv }}{% else %}0{% endif %}",';
+    csvData += '"{% if cart.recovery_probability %}{{ "%.3f"|format(cart.recovery_probability) }}{% else %}-{% endif %}",';
+    csvData += '"{% if cart.abandoned_at %}{{ ((current_date() - cart.abandoned_at).days) }}{% else %}-{% endif %}",';
+    csvData += '"{% if cart.recovery_email_sent %}Yes{% else %}No{% endif %}",';
+    csvData += '"{% if cart.recovered %}Yes{% else %}No{% endif %}"\n';
+    {% endfor %}
+    
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'abandoned_cart_recovery.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Cart Actions
+function sendRecoveryEmail(cartId) {
+    alert('Recovery email would be sent for cart ID: ' + cartId);
+}
+
+function viewCart(cartId) {
+    alert('Viewing cart details for cart ID: ' + cartId);
+}
+
+function implementRecoveryAction(type) {
+    alert('Implementing recovery action of type: ' + type);
+}
+
+// Table Filters
+function filterHighValue() {
+    const table = document.getElementById('abandonedCartsTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < rows.length; i++) {
+        const cartValue = parseFloat(rows[i].cells[1].textContent.replace('$', ''));
+        if (cartValue < 100) {
+            rows[i].style.display = 'none';
+        } else {
+            rows[i].style.display = '';
+        }
+    }
+}
+
+function filterUncontacted() {
+    const table = document.getElementById('abandonedCartsTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < rows.length; i++) {
+        const emailSent = rows[i].cells[6].textContent.trim();
+        if (emailSent === 'Yes') {
+            rows[i].style.display = 'none';
+        } else {
+            rows[i].style.display = '';
+        }
+    }
+}
+
+// Helper function for current date (approximation)
+function current_date() {
+    return new Date();
+}
+</script>
+{% endblock %}

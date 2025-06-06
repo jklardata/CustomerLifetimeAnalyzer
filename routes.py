@@ -215,11 +215,37 @@ def callback():
         session['store_id'] = store.id
         session['shop_domain'] = shop
         
+        # Automatically sync data from Shopify after successful authentication
+        logging.info(f"Starting automatic data sync for store: {shop}")
+        try:
+            # Clear any existing demo data for this store first
+            clear_store_data(store)
+            logging.info("Cleared existing demo data")
+            
+            # Sync customers from Shopify
+            customers_synced = sync_customers(shopify_client, store)
+            logging.info(f"Synced {customers_synced} customers")
+            
+            # Sync orders from Shopify
+            orders_synced = sync_orders(shopify_client, store)
+            logging.info(f"Synced {orders_synced} orders")
+            
+            # Calculate CLV for all customers
+            clv_calculator = CLVCalculator()
+            clv_calculator.calculate_store_clv(store)
+            logging.info("CLV calculations completed")
+            
+            flash(f'Successfully connected and synced {customers_synced} customers and {orders_synced} orders!', 'success')
+            
+        except Exception as sync_error:
+            logging.error(f"Data sync error: {str(sync_error)}")
+            logging.error(traceback.format_exc())
+            flash('Connected to Shopify but data sync encountered issues. You can manually sync from the dashboard.', 'warning')
+        
         # Clean up OAuth session data
         session.pop('oauth_state', None)
         session.pop('shop', None)
         
-        flash('Successfully connected to Shopify!', 'success')
         return redirect(url_for('dashboard'))
         
     except Exception as e:
@@ -795,6 +821,28 @@ def get_dashboard_metrics(store):
             'churn_risk': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
         }
 
+def clear_store_data(store):
+    """Clear existing data for a store before syncing new data"""
+    try:
+        # Delete orders first (due to foreign key constraints)
+        Order.query.filter_by(store_id=store.id).delete()
+        
+        # Delete customers
+        Customer.query.filter_by(store_id=store.id).delete()
+        
+        # Delete products if any
+        Product.query.filter_by(store_id=store.id).delete()
+        
+        # Delete abandoned carts if any
+        AbandonedCart.query.filter_by(store_id=store.id).delete()
+        
+        db.session.commit()
+        logging.info(f"Cleared existing data for store {store.shop_domain}")
+        
+    except Exception as e:
+        logging.error(f"Error clearing store data: {str(e)}")
+        db.session.rollback()
+
 def sync_customers(shopify_client, store):
     """Sync customers from Shopify"""
     try:
@@ -824,6 +872,7 @@ def sync_customers(shopify_client, store):
             
             customers_synced += 1
         
+        db.session.commit()
         return customers_synced
         
     except Exception as e:
@@ -878,6 +927,7 @@ def sync_orders(shopify_client, store):
             
             orders_synced += 1
         
+        db.session.commit()
         return orders_synced
         
     except Exception as e:

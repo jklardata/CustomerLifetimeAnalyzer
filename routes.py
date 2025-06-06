@@ -161,7 +161,7 @@ def create_sample_data(store):
     
     logging.info(f"Created sample data for {len(customers_data)} customers")
 
-@app.route('/callback')
+@app.route('/auth/callback')
 def callback():
     """Shopify OAuth callback"""
     try:

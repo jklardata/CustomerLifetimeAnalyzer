@@ -976,12 +976,22 @@ def sync_customers(shopify_client, store):
     """Sync customers from Shopify"""
     try:
         logging.info(f"Fetching customers for shop: {store.shop_domain}")
+        logging.info(f"Using access token: {store.access_token[:20]}...")
+        
         customers_data = shopify_client.get_customers(store.shop_domain)
-        logging.info(f"API returned {len(customers_data) if customers_data else 0} customers")
+        
+        # Log raw API response details
+        if customers_data is None:
+            logging.error("API returned None - this indicates authentication or permission failure")
+            return 0
+        elif customers_data == []:
+            logging.warning("API returned empty list - store may have no customers")
+            return 0
+        else:
+            logging.info(f"API returned {len(customers_data)} customers")
+            logging.info(f"First customer sample: {customers_data[0] if customers_data else 'None'}")
         
         if not customers_data:
-            logging.warning("No customer data returned from Shopify API")
-            logging.info("This is expected if your store has no customers yet")
             return 0
             
         customers_synced = 0

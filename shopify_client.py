@@ -77,6 +77,10 @@ class ShopifyClient:
                 
                 if response.status_code != 200:
                     logging.error(f"API error: {response.status_code} - {response.text}")
+                    if response.status_code == 401:
+                        logging.error("401 Unauthorized - Access token may be invalid or expired")
+                    elif response.status_code == 403:
+                        logging.error("403 Forbidden - Missing required scopes (read_customers, read_orders)")
                     
                 response.raise_for_status()
                 json_data = response.json()

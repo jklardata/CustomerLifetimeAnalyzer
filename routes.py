@@ -45,9 +45,10 @@ def auth():
         session['oauth_state'] = state
         session['shop'] = shop
         
-        # Build OAuth URL with debugging
-        redirect_uri = url_for('callback', _external=True)
-        logging.info(f"Redirect URI: {redirect_uri}")
+        # Build OAuth URL with explicit redirect URI to match whitelisted value
+        # Use the exact URL that's whitelisted in your Shopify app
+        redirect_uri = "https://customer-lifetime-analyzer-justinleu1.replit.app/callback"
+        logging.info(f"Using explicit redirect URI: {redirect_uri}")
         
         params = {
             'client_id': app.config['SHOPIFY_API_KEY'],
@@ -57,8 +58,10 @@ def auth():
         }
         
         oauth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
-        logging.info(f"OAuth URL: {oauth_url}")
-        logging.info(f"Using API Key: {app.config['SHOPIFY_API_KEY'][:8]}...")
+        logging.info(f"Complete OAuth URL: {oauth_url}")
+        logging.info(f"OAuth Parameters: {params}")
+        logging.info(f"API Key: {app.config['SHOPIFY_API_KEY']}")
+        logging.info(f"Redirect URI being sent: {redirect_uri}")
         
         return redirect(oauth_url)
         

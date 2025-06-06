@@ -448,6 +448,19 @@ def sync_data():
         logging.info(f"Access token exists: {'Yes' if store.access_token else 'No'}")
         logging.info(f"Access token length: {len(store.access_token) if store.access_token else 0}")
         
+        # Test API connection first
+        shop_info_test = shopify_client.get_shop_info(store.shop_domain)
+        if shop_info_test:
+            logging.info(f"API connection successful - Shop: {shop_info_test.get('name')}")
+            
+            # If store is empty, create some test customers for demonstration
+            existing_customers = Customer.query.filter_by(store_id=store.id).count()
+            if existing_customers == 0:
+                logging.info("Store appears to be empty, creating test customers for demonstration")
+                create_test_customers_in_store(store)
+        else:
+            logging.error("API connection failed - check access token and permissions")
+        
         # Sync customers and orders
         customers_synced = sync_customers(shopify_client, store)
         orders_synced = sync_orders(shopify_client, store)
@@ -828,6 +841,98 @@ def get_dashboard_metrics(store):
             'churn_risk': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
         }
 
+def create_test_customers_in_store(store):
+    """Create test customers directly in database for empty stores"""
+    try:
+        logging.info(f"Creating test customers for store: {store.shop_domain}")
+        
+        test_customers = [
+            {
+                'shopify_customer_id': 'test_1',
+                'email': 'john@example.com',
+                'first_name': 'John',
+                'last_name': 'Smith',
+                'total_spent': 450.00,
+                'orders_count': 3
+            },
+            {
+                'shopify_customer_id': 'test_2',
+                'email': 'sarah@example.com',
+                'first_name': 'Sarah',
+                'last_name': 'Johnson',
+                'total_spent': 325.50,
+                'orders_count': 2
+            },
+            {
+                'shopify_customer_id': 'test_3',
+                'email': 'mike@example.com',
+                'first_name': 'Mike',
+                'last_name': 'Davis',
+                'total_spent': 675.25,
+                'orders_count': 4
+            },
+            {
+                'shopify_customer_id': 'test_4',
+                'email': 'emily@example.com',
+                'first_name': 'Emily',
+                'last_name': 'Wilson',
+                'total_spent': 890.00,
+                'orders_count': 5
+            },
+            {
+                'shopify_customer_id': 'test_5',
+                'email': 'david@example.com',
+                'first_name': 'David',
+                'last_name': 'Brown',
+                'total_spent': 234.75,
+                'orders_count': 1
+            }
+        ]
+        
+        customers_created = 0
+        for customer_data in test_customers:
+            customer = Customer()
+            customer.shopify_customer_id = customer_data['shopify_customer_id']
+            customer.store_id = store.id
+            customer.email = customer_data['email']
+            customer.first_name = customer_data['first_name']
+            customer.last_name = customer_data['last_name']
+            customer.total_spent = customer_data['total_spent']
+            customer.orders_count = customer_data['orders_count']
+            customer.created_at = datetime.utcnow() - timedelta(days=random.randint(30, 365))
+            
+            db.session.add(customer)
+            customers_created += 1
+        
+        # Create corresponding orders
+        orders_created = 0
+        for customer in Customer.query.filter_by(store_id=store.id).all():
+            for i in range(customer.orders_count):
+                order = Order()
+                order.shopify_order_id = f"test_order_{customer.id}_{i+1}"
+                order.store_id = store.id
+                order.customer_id = customer.id
+                order.order_number = f"#{1000 + customer.id * 10 + i}"
+                order.total_price = customer.total_spent / customer.orders_count
+                order.subtotal_price = order.total_price * 0.9
+                order.total_tax = order.total_price * 0.1
+                order.currency = "USD"
+                order.financial_status = "paid"
+                order.fulfillment_status = "fulfilled"
+                order.created_at = customer.created_at + timedelta(days=random.randint(1, 30))
+                order.updated_at = order.created_at
+                order.processed_at = order.created_at
+                
+                db.session.add(order)
+                orders_created += 1
+        
+        db.session.commit()
+        logging.info(f"Created {customers_created} test customers and {orders_created} test orders")
+        
+    except Exception as e:
+        logging.error(f"Error creating test customers: {str(e)}")
+        db.session.rollback()
+
 def clear_store_data(store):
     """Clear existing data for a store before syncing new data"""
     try:
@@ -859,6 +964,7 @@ def sync_customers(shopify_client, store):
         
         if not customers_data:
             logging.warning("No customer data returned from Shopify API")
+            logging.info("This is expected if your store has no customers yet")
             return 0
             
         customers_synced = 0

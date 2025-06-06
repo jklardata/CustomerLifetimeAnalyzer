@@ -446,6 +446,274 @@ def logout():
     flash('Successfully logged out.', 'info')
     return redirect(url_for('index'))
 
+@app.route('/clv-optimization/product-level')
+def product_clv_optimization():
+    """Product Level CLV Optimization Dashboard"""
+    store_id = session.get('store_id')
+    if not store_id:
+        flash('Please log in to view this page.', 'error')
+        return redirect(url_for('auth'))
+    
+    try:
+        from models import Product, OrderLineItem, Customer, Order
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.model_selection import train_test_split
+        import pandas as pd
+        import numpy as np
+        
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            flash('Store not found.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get product data with CLV metrics
+        products = Product.query.filter_by(store_id=store.id).all()
+        
+        # Initialize model data
+        model_data = {'model_trained': False}
+        
+        # Prepare data for ML model
+        if products:
+            # Create feature matrix for products
+            product_features = []
+            clv_targets = []
+            
+            for product in products:
+                # Calculate additional features from order line items
+                line_items = OrderLineItem.query.filter_by(product_id=product.id).all()
+                
+                if line_items:
+                    # Feature engineering
+                    total_quantity = sum(item.quantity for item in line_items)
+                    avg_quantity_per_order = total_quantity / len(line_items) if line_items else 0
+                    total_revenue = sum(float(item.price) * item.quantity for item in line_items)
+                    avg_discount = sum(float(item.total_discount or 0) for item in line_items) / len(line_items)
+                    return_count = sum(1 for item in line_items if item.is_returned)
+                    
+                    # Category encoding (simple numeric for demo)
+                    category_map = {'Electronics': 1, 'Apparel': 2, 'Home & Garden': 3, 'Beauty': 4, 'Fitness': 5, 'Accessories': 6, 'Health': 7, 'Footwear': 8, 'Lifestyle': 9, 'Food & Beverage': 10}
+                    category_encoded = category_map.get(product.category, 0)
+                    
+                    features = [
+                        float(product.price),
+                        product.inventory_quantity,
+                        total_quantity,
+                        avg_quantity_per_order,
+                        total_revenue,
+                        avg_discount,
+                        return_count,
+                        category_encoded,
+                        float(product.return_rate),
+                        float(product.units_sold)
+                    ]
+                    
+                    product_features.append(features)
+                    clv_targets.append(float(product.avg_clv_contribution or 0))
+            
+            # Train Random Forest model for product CLV prediction
+            if len(product_features) > 5:  # Need minimum data for training
+                X = np.array(product_features)
+                y = np.array(clv_targets)
+                
+                # Split data
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                
+                # Train model
+                rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+                rf_model.fit(X_train, y_train)
+                
+                # Make predictions
+                y_pred = rf_model.predict(X_test)
+                
+                # Calculate feature importance
+                feature_names = ['Price', 'Inventory', 'Total Quantity', 'Avg Quantity/Order', 'Total Revenue', 'Avg Discount', 'Return Count', 'Category', 'Return Rate', 'Units Sold']
+                feature_importance = list(zip(feature_names, rf_model.feature_importances_))
+                feature_importance.sort(key=lambda x: x[1], reverse=True)
+                
+                # Generate predictions for all products
+                predictions = rf_model.predict(X)
+                
+                model_data = {
+                    'feature_importance': feature_importance,
+                    'model_score': rf_model.score(X_test, y_test),
+                    'predictions': predictions.tolist(),
+                    'model_trained': True
+                }
+        
+        # Generate product recommendations (using helper function defined below)
+        recommendations = []
+        if products:
+            # Sort products by CLV contribution
+            sorted_products = sorted(products, key=lambda p: float(p.avg_clv_contribution or 0), reverse=True)
+            
+            # Top performers
+            top_products = sorted_products[:3]
+            for product in top_products:
+                recommendations.append({
+                    'type': 'promotion',
+                    'priority': 'high',
+                    'title': f'Promote {product.title} to high-CLV customers',
+                    'description': f'This product contributes ${product.avg_clv_contribution:.2f} average CLV. Offer 10% discount to customers with CLV > $300.',
+                    'impact': 'High CLV increase potential',
+                    'action': f'Create targeted campaign for {product.title}'
+                })
+        
+        # Product performance analysis
+        product_analysis = {}
+        if products:
+            # Category analysis
+            category_performance = {}
+            for product in products:
+                category = product.category
+                if category not in category_performance:
+                    category_performance[category] = {
+                        'products': 0,
+                        'total_clv': 0,
+                        'avg_clv': 0,
+                        'total_sales': 0,
+                        'avg_return_rate': 0
+                    }
+                
+                cat_data = category_performance[category]
+                cat_data['products'] += 1
+                cat_data['total_clv'] += float(product.avg_clv_contribution or 0)
+                cat_data['total_sales'] += float(product.total_sales or 0)
+                cat_data['avg_return_rate'] += float(product.return_rate or 0)
+            
+            # Calculate averages
+            for category, data in category_performance.items():
+                if data['products'] > 0:
+                    data['avg_clv'] = data['total_clv'] / data['products']
+                    data['avg_return_rate'] = data['avg_return_rate'] / data['products']
+            
+            # Top and bottom performers
+            sorted_products = sorted(products, key=lambda p: float(p.avg_clv_contribution or 0), reverse=True)
+            
+            product_analysis = {
+                'category_performance': category_performance,
+                'top_performers': sorted_products[:5],
+                'bottom_performers': sorted_products[-5:],
+                'total_products': len(products),
+                'avg_clv_contribution': sum(float(p.avg_clv_contribution or 0) for p in products) / len(products) if products else 0
+            }
+        
+        return render_template('product_clv_optimization.html', 
+                             products=products,
+                             model_data=model_data,
+                             recommendations=recommendations,
+                             analysis=product_analysis,
+                             store=store)
+    
+    except Exception as e:
+        logging.error(f"Error in product CLV optimization: {str(e)}")
+        logging.error(traceback.format_exc())
+        flash('Error loading product CLV optimization data.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/clv-optimization/abandoned-cart-recovery')
+def abandoned_cart_recovery():
+    """Predictive Abandoned Cart Recovery Dashboard"""
+    store_id = session.get('store_id')
+    if not store_id:
+        flash('Please log in to view this page.', 'error')
+        return redirect(url_for('auth'))
+    
+    try:
+        from models import AbandonedCart, Customer
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.model_selection import train_test_split
+        import pandas as pd
+        import numpy as np
+        
+        store = ShopifyStore.query.get(store_id)
+        if not store:
+            flash('Store not found.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Get abandoned cart data
+        abandoned_carts = AbandonedCart.query.filter_by(store_id=store.id).all()
+        
+        # Prepare data for ML model
+        recovery_model_data = {}
+        if abandoned_carts:
+            # Create feature matrix for abandoned carts
+            cart_features = []
+            recovery_targets = []
+            
+            for cart in abandoned_carts:
+                if cart.customer:
+                    # Feature engineering for recovery prediction
+                    customer_clv = float(cart.customer.predicted_clv or 0)
+                    customer_orders = cart.customer.orders_count
+                    customer_total_spent = float(cart.customer.total_spent or 0)
+                    cart_value = float(cart.total_price)
+                    items_count = cart.line_items_count
+                    days_since_abandoned = (datetime.utcnow() - cart.abandoned_at).days if cart.abandoned_at else 0
+                    
+                    # Customer behavior features
+                    avg_order_value = customer_total_spent / customer_orders if customer_orders > 0 else 0
+                    cart_to_aov_ratio = cart_value / avg_order_value if avg_order_value > 0 else 0
+                    
+                    features = [
+                        customer_clv,
+                        customer_orders,
+                        customer_total_spent,
+                        cart_value,
+                        items_count,
+                        days_since_abandoned,
+                        avg_order_value,
+                        cart_to_aov_ratio
+                    ]
+                    
+                    cart_features.append(features)
+                    recovery_targets.append(1 if cart.recovered else 0)
+            
+            # Train Random Forest model for recovery prediction
+            if len(cart_features) > 10:  # Need minimum data for training
+                X = np.array(cart_features)
+                y = np.array(recovery_targets)
+                
+                # Split data
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                
+                # Train model
+                rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+                rf_model.fit(X_train, y_train)
+                
+                # Calculate feature importance
+                feature_names = ['Customer CLV', 'Order Count', 'Total Spent', 'Cart Value', 'Items Count', 'Days Abandoned', 'Avg Order Value', 'Cart/AOV Ratio']
+                feature_importance = list(zip(feature_names, rf_model.feature_importances_))
+                feature_importance.sort(key=lambda x: x[1], reverse=True)
+                
+                # Generate recovery probabilities for all carts
+                recovery_predictions = rf_model.predict(X)
+                
+                recovery_model_data = {
+                    'feature_importance': feature_importance,
+                    'model_score': rf_model.score(X_test, y_test),
+                    'predictions': recovery_predictions.tolist(),
+                    'model_trained': True
+                }
+        
+        # Calculate recovery metrics
+        recovery_metrics = calculate_recovery_metrics(abandoned_carts)
+        
+        # Generate targeted recovery recommendations
+        recovery_recommendations = generate_recovery_recommendations(abandoned_carts)
+        
+        return render_template('abandoned_cart_recovery.html',
+                             abandoned_carts=abandoned_carts,
+                             recovery_model_data=recovery_model_data,
+                             recovery_metrics=recovery_metrics,
+                             recommendations=recovery_recommendations,
+                             store=store)
+    
+    except Exception as e:
+        logging.error(f"Error in abandoned cart recovery: {str(e)}")
+        logging.error(traceback.format_exc())
+        flash('Error loading abandoned cart recovery data.', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
@@ -920,3 +1188,172 @@ def generate_product_clv_analysis(orders):
     
     # Sort by predicted CLV and return top 10
     return sorted(product_clv_list, key=lambda x: x['predicted_clv'], reverse=True)[:10]
+
+def generate_product_clv_recommendations(products):
+    """Generate personalized product recommendations for CLV optimization"""
+    recommendations = []
+    
+    if not products:
+        return recommendations
+    
+    # Sort products by CLV contribution
+    sorted_products = sorted(products, key=lambda p: float(p.avg_clv_contribution or 0), reverse=True)
+    
+    # Top performers
+    top_products = sorted_products[:3]
+    for product in top_products:
+        recommendations.append({
+            'type': 'promotion',
+            'priority': 'high',
+            'title': f'Promote {product.title} to high-CLV customers',
+            'description': f'This product contributes ${product.avg_clv_contribution:.2f} average CLV. Offer 10% discount to customers with CLV > $300.',
+            'impact': 'High CLV increase potential',
+            'action': f'Create targeted campaign for {product.title}'
+        })
+    
+    # Low performers that could be optimized
+    low_performers = [p for p in products if float(p.return_rate) > 0.1]
+    for product in low_performers[:2]:
+        recommendations.append({
+            'type': 'optimization',
+            'priority': 'medium',
+            'title': f'Reduce returns for {product.title}',
+            'description': f'Return rate of {product.return_rate:.1%} is impacting CLV. Review product quality or description.',
+            'impact': 'Reduce negative CLV impact',
+            'action': f'Quality review for {product.title}'
+        })
+    
+    # Inventory optimization
+    high_clv_low_inventory = [p for p in products if float(p.avg_clv_contribution or 0) > 200 and p.inventory_quantity < 100]
+    for product in high_clv_low_inventory[:2]:
+        recommendations.append({
+            'type': 'inventory',
+            'priority': 'high',
+            'title': f'Restock {product.title}',
+            'description': f'High CLV product with only {product.inventory_quantity} units remaining.',
+            'impact': 'Prevent lost CLV opportunities',
+            'action': f'Increase inventory for {product.title}'
+        })
+    
+    return recommendations
+
+def analyze_product_clv_performance(products):
+    """Analyze product performance for CLV optimization"""
+    if not products:
+        return {}
+    
+    # Category analysis
+    category_performance = {}
+    for product in products:
+        category = product.category
+        if category not in category_performance:
+            category_performance[category] = {
+                'products': 0,
+                'total_clv': 0,
+                'avg_clv': 0,
+                'total_sales': 0,
+                'avg_return_rate': 0
+            }
+        
+        cat_data = category_performance[category]
+        cat_data['products'] += 1
+        cat_data['total_clv'] += float(product.avg_clv_contribution or 0)
+        cat_data['total_sales'] += float(product.total_sales or 0)
+        cat_data['avg_return_rate'] += float(product.return_rate or 0)
+    
+    # Calculate averages
+    for category, data in category_performance.items():
+        if data['products'] > 0:
+            data['avg_clv'] = data['total_clv'] / data['products']
+            data['avg_return_rate'] = data['avg_return_rate'] / data['products']
+    
+    # Top and bottom performers
+    sorted_products = sorted(products, key=lambda p: float(p.avg_clv_contribution or 0), reverse=True)
+    
+    return {
+        'category_performance': category_performance,
+        'top_performers': sorted_products[:5],
+        'bottom_performers': sorted_products[-5:],
+        'total_products': len(products),
+        'avg_clv_contribution': sum(float(p.avg_clv_contribution or 0) for p in products) / len(products) if products else 0
+    }
+
+def calculate_recovery_metrics(abandoned_carts):
+    """Calculate abandoned cart recovery metrics"""
+    if not abandoned_carts:
+        return {}
+    
+    total_carts = len(abandoned_carts)
+    recovered_carts = sum(1 for cart in abandoned_carts if cart.recovered)
+    emails_sent = sum(1 for cart in abandoned_carts if cart.recovery_email_sent)
+    
+    total_value = sum(float(cart.total_price) for cart in abandoned_carts)
+    recovered_value = sum(float(cart.total_price) for cart in abandoned_carts if cart.recovered)
+    
+    # High-value carts (>$100)
+    high_value_carts = [cart for cart in abandoned_carts if float(cart.total_price) > 100]
+    high_value_recovered = [cart for cart in high_value_carts if cart.recovered]
+    
+    return {
+        'total_carts': total_carts,
+        'recovered_carts': recovered_carts,
+        'recovery_rate': (recovered_carts / total_carts * 100) if total_carts > 0 else 0,
+        'emails_sent': emails_sent,
+        'email_recovery_rate': (recovered_carts / emails_sent * 100) if emails_sent > 0 else 0,
+        'total_value': total_value,
+        'recovered_value': recovered_value,
+        'value_recovery_rate': (recovered_value / total_value * 100) if total_value > 0 else 0,
+        'high_value_carts': len(high_value_carts),
+        'high_value_recovered': len(high_value_recovered),
+        'avg_cart_value': total_value / total_carts if total_carts > 0 else 0
+    }
+
+def generate_recovery_recommendations(abandoned_carts):
+    """Generate targeted recovery recommendations"""
+    recommendations = []
+    
+    if not abandoned_carts:
+        return recommendations
+    
+    # High-value carts without recovery emails
+    high_value_no_email = [cart for cart in abandoned_carts 
+                          if float(cart.total_price) > 100 and not cart.recovery_email_sent]
+    
+    if high_value_no_email:
+        recommendations.append({
+            'type': 'email_campaign',
+            'priority': 'high',
+            'title': f'Target {len(high_value_no_email)} high-value abandoned carts',
+            'description': f'Send recovery emails to carts worth $100+ (total value: ${sum(float(c.total_price) for c in high_value_no_email):.2f})',
+            'impact': 'High revenue recovery potential',
+            'action': 'Create high-value cart recovery campaign'
+        })
+    
+    # Recent abandoners with high CLV
+    recent_high_clv = [cart for cart in abandoned_carts 
+                      if cart.customer and float(cart.customer.predicted_clv or 0) > 300 
+                      and cart.abandoned_at and (datetime.utcnow() - cart.abandoned_at).days <= 3]
+    
+    if recent_high_clv:
+        recommendations.append({
+            'type': 'personalized_offer',
+            'priority': 'high',
+            'title': f'Personalized offers for {len(recent_high_clv)} high-CLV customers',
+            'description': 'Recent cart abandoners with high CLV deserve personalized attention',
+            'impact': 'Retain high-value customers',
+            'action': 'Send personalized discount offers'
+        })
+    
+    # Multi-item carts
+    multi_item_carts = [cart for cart in abandoned_carts if cart.line_items_count > 2]
+    if multi_item_carts:
+        recommendations.append({
+            'type': 'bundle_discount',
+            'priority': 'medium',
+            'title': f'Bundle discounts for {len(multi_item_carts)} multi-item carts',
+            'description': 'Offer bundle discounts to recover carts with multiple items',
+            'impact': 'Increase average order value',
+            'action': 'Create bundle discount campaign'
+        })
+    
+    return recommendations

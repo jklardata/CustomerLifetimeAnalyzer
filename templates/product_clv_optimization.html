@@ -1,0 +1,445 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Product Level CLV Optimization{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h3 mb-0">Product Level CLV Optimization</h2>
+            <p class="text-muted">AI-powered product recommendations and dynamic pricing optimization</p>
+        </div>
+        <div>
+            <button class="btn btn-success" onclick="exportProductData()">
+                <i data-feather="download" class="me-2"></i>Export Data
+            </button>
+        </div>
+    </div>
+
+    <!-- ML Model Status -->
+    {% if model_data.model_trained %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="card-title mb-0">
+                                <i data-feather="cpu" class="me-2"></i>
+                                Random Forest Model Active
+                            </h5>
+                            <p class="card-text mb-0">
+                                Model accuracy: {{ "%.1f"|format(model_data.model_score * 100) }}% | 
+                                Predicting CLV impact for {{ products|length }} products
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <i data-feather="check-circle" style="width: 3rem; height: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i data-feather="alert-triangle" class="me-2"></i>
+                        Insufficient Data for ML Model
+                    </h5>
+                    <p class="card-text mb-0">
+                        Need more product and order data to train the Random Forest model for CLV predictions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-primary">
+                            <i data-feather="package"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ analysis.total_products or 0 }}</div>
+                            <div class="metric-label">Total Products</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-success">
+                            <i data-feather="trending-up"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">${{ "%.0f"|format(analysis.avg_clv_contribution or 0) }}</div>
+                            <div class="metric-label">Avg CLV Contribution</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-info">
+                            <i data-feather="bar-chart-2"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ analysis.category_performance|length or 0 }}</div>
+                            <div class="metric-label">Product Categories</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon bg-warning">
+                            <i data-feather="target"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="metric-value">{{ recommendations|length or 0 }}</div>
+                            <div class="metric-label">AI Recommendations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Feature Importance Chart -->
+        {% if model_data.model_trained %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="brain" class="me-2"></i>
+                        ML Model Feature Importance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="featureImportanceChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Category Performance -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="pie-chart" class="me-2"></i>
+                        Category CLV Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryPerformanceChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Products -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="award" class="me-2"></i>
+                        Top CLV Contributing Products
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>CLV Contribution</th>
+                                    <th>Return Rate</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in analysis.top_performers[:5] %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ product.title }}</strong><br>
+                                        <small class="text-muted">{{ product.vendor }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ product.category }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">${{ "%.2f"|format(product.avg_clv_contribution) }}</span>
+                                    </td>
+                                    <td>
+                                        {% if product.return_rate > 0.1 %}
+                                        <span class="text-danger">{{ "%.1f"|format(product.return_rate * 100) }}%</span>
+                                        {% else %}
+                                        <span class="text-success">{{ "%.1f"|format(product.return_rate * 100) }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="optimizeProduct('{{ product.id }}')">
+                                            Optimize
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Recommendations -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="lightbulb" class="me-2"></i>
+                        AI-Powered Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for rec in recommendations %}
+                    <div class="recommendation-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">{{ rec.title }}</h6>
+                            <span class="badge bg-{{ 'danger' if rec.priority == 'high' else 'warning' if rec.priority == 'medium' else 'info' }}">
+                                {{ rec.priority.title() }}
+                            </span>
+                        </div>
+                        <p class="mb-2 text-muted">{{ rec.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-success fw-bold">{{ rec.impact }}</small>
+                            <button class="btn btn-sm btn-success" onclick="implementRecommendation('{{ rec.type }}')">
+                                {{ rec.action }}
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- All Products Table -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="list" class="me-2"></i>
+                        Product CLV Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="productsTable">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>CLV Contribution</th>
+                                    <th>Predicted CLV</th>
+                                    <th>Units Sold</th>
+                                    <th>Return Rate</th>
+                                    <th>Inventory</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ product.title }}</strong><br>
+                                        <small class="text-muted">{{ product.vendor }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ product.category }}</span>
+                                    </td>
+                                    <td>${{ "%.2f"|format(product.price) }}</td>
+                                    <td>
+                                        <span class="text-success fw-bold">${{ "%.2f"|format(product.avg_clv_contribution) }}</span>
+                                    </td>
+                                    <td>
+                                        {% if model_data.model_trained and loop.index0 < model_data.predictions|length %}
+                                        <span class="text-info fw-bold">${{ "%.2f"|format(model_data.predictions[loop.index0]) }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.units_sold }}</td>
+                                    <td>
+                                        {% if product.return_rate > 0.1 %}
+                                        <span class="text-danger">{{ "%.1f"|format(product.return_rate * 100) }}%</span>
+                                        {% else %}
+                                        <span class="text-success">{{ "%.1f"|format(product.return_rate * 100) }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.inventory_quantity < 50 %}
+                                        <span class="text-danger">{{ product.inventory_quantity }}</span>
+                                        {% else %}
+                                        <span class="text-success">{{ product.inventory_quantity }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="optimizeProduct('{{ product.id }}')">
+                                                Optimize
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" onclick="promoteProduct('{{ product.id }}')">
+                                                Promote
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Feature Importance Chart
+{% if model_data.model_trained %}
+const featureCtx = document.getElementById('featureImportanceChart').getContext('2d');
+new Chart(featureCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for feature, importance in model_data.feature_importance %}'{{ feature }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Feature Importance',
+            data: [{% for feature, importance in model_data.feature_importance %}{{ importance }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Importance Score'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Features'
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Category Performance Chart
+const categoryCtx = document.getElementById('categoryPerformanceChart').getContext('2d');
+const categoryData = {
+    labels: [{% for category, data in analysis.category_performance.items() %}'{{ category }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+        label: 'Average CLV Contribution',
+        data: [{% for category, data in analysis.category_performance.items() %}{{ data.avg_clv }}{% if not loop.last %},{% endif %}{% endfor %}],
+        backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 205, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 159, 64, 0.8)',
+            'rgba(199, 199, 199, 0.8)',
+            'rgba(83, 102, 255, 0.8)',
+            'rgba(255, 99, 255, 0.8)',
+            'rgba(99, 255, 132, 0.8)'
+        ]
+    }]
+};
+
+new Chart(categoryCtx, {
+    type: 'doughnut',
+    data: categoryData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Export Data Function
+function exportProductData() {
+    // Generate CSV data
+    let csvData = 'Product,Category,Price,CLV Contribution,Predicted CLV,Units Sold,Return Rate,Inventory\n';
+    
+    {% for product in products %}
+    csvData += '"{{ product.title }}","{{ product.category }}","{{ product.price }}","{{ product.avg_clv_contribution }}",';
+    {% if model_data.model_trained and loop.index0 < model_data.predictions|length %}
+    csvData += '"{{ model_data.predictions[loop.index0] }}",';
+    {% else %}
+    csvData += '"-",';
+    {% endif %}
+    csvData += '"{{ product.units_sold }}","{{ "%.3f"|format(product.return_rate) }}","{{ product.inventory_quantity }}"\n';
+    {% endfor %}
+    
+    // Download CSV
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product_clv_optimization.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Product Actions
+function optimizeProduct(productId) {
+    alert('Product optimization campaign would be created for product ID: ' + productId);
+}
+
+function promoteProduct(productId) {
+    alert('Promotional campaign would be created for product ID: ' + productId);
+}
+
+function implementRecommendation(type) {
+    alert('Implementing recommendation of type: ' + type);
+}
+</script>
+{% endblock %}

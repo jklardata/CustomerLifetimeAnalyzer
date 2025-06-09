@@ -462,7 +462,11 @@ def sync_data():
             if test_orders is not None:
                 logging.info(f"Orders API access working - returned {len(test_orders)} orders")
             else:
-                logging.error("Orders API access failed - implementing demo mode for testing")
+                logging.error("Orders API access failed - check authentication")
+                return jsonify({
+                    'success': False,
+                    'error': 'Orders API access failed - check authentication'
+                })
                 
         else:
             logging.error("API connection failed - check access token and permissions")

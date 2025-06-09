@@ -32,13 +32,12 @@ class DemoOrdersGenerator:
         """Get or create demo store"""
         store = ShopifyStore.query.filter_by(shop_domain="demo-clv-store.myshopify.com").first()
         if not store:
-            store = ShopifyStore(
-                shop_domain="demo-clv-store.myshopify.com",
-                access_token="demo_token_123",
-                shop_id="demo_shop_001",
-                shop_name="CLV Demo Store",
-                email="demo@clvstore.com"
-            )
+            store = ShopifyStore()
+            store.shop_domain = "demo-clv-store.myshopify.com"
+            store.access_token = "demo_token_123"
+            store.shop_id = "demo_shop_001"
+            store.shop_name = "CLV Demo Store"
+            store.email = "demo@clvstore.com"
             db.session.add(store)
             db.session.commit()
         return store
@@ -62,17 +61,16 @@ class DemoOrdersGenerator:
         ]
         
         for i, product_data in enumerate(products_data):
-            product = Product(
-                store_id=store.id,
-                shopify_product_id=f"demo_product_{i+1}",
-                title=product_data["title"],
-                category=product_data["category"],
-                price=Decimal(str(product_data["price"])),
-                inventory_quantity=random.randint(50, 200),
-                units_sold=0,
-                total_sales=Decimal('0.00'),
-                return_rate=random.uniform(0.02, 0.08)
-            )
+            product = Product()
+            product.store_id = store.id
+            product.shopify_product_id = f"demo_product_{i+1}"
+            product.title = product_data["title"]
+            product.category = product_data["category"]
+            product.price = Decimal(str(product_data["price"]))
+            product.inventory_quantity = random.randint(50, 200)
+            product.units_sold = 0
+            product.total_sales = Decimal('0.00')
+            product.return_rate = random.uniform(0.02, 0.08)
             db.session.add(product)
         
         db.session.commit()
@@ -116,30 +114,29 @@ class DemoOrdersGenerator:
                 if order_num > 0:
                     base_value *= random.uniform(1.1, 1.4)
                 
-                order = Order(
-                    shopify_order_id=f"demo_order_{customer_num}_{order_num + 1}_{random.randint(1000, 9999)}",
-                    store_id=store.id,
-                    customer_hash=customer_hash,
-                    order_number=f"#{1000 + orders_created}",
-                    total_price=Decimal(str(round(base_value, 2))),
-                    subtotal_price=Decimal(str(round(base_value * 0.9, 2))),
-                    total_tax=Decimal(str(round(base_value * 0.1, 2))),
-                    currency="USD",
-                    financial_status="paid",
-                    fulfillment_status="fulfilled",
-                    created_at=order_date,
-                    updated_at=order_date,
-                    processed_at=order_date,
-                    order_sequence=order_num + 1,
-                    days_since_first_order=(order_date - first_order_date).days,
-                    is_returned=random.random() < 0.05,  # 5% return rate
-                    shopify_data={
-                        "id": f"demo_order_{customer_num}_{order_num + 1}",
-                        "order_number": f"#{1000 + orders_created}",
-                        "demo": True,
-                        "customer_segment": segment_type
-                    }
-                )
+                order = Order()
+                order.shopify_order_id = f"demo_order_{customer_num}_{order_num + 1}_{random.randint(1000, 9999)}"
+                order.store_id = store.id
+                order.customer_hash = customer_hash
+                order.order_number = f"#{1000 + orders_created}"
+                order.total_price = Decimal(str(round(base_value, 2)))
+                order.subtotal_price = Decimal(str(round(base_value * 0.9, 2)))
+                order.total_tax = Decimal(str(round(base_value * 0.1, 2)))
+                order.currency = "USD"
+                order.financial_status = "paid"
+                order.fulfillment_status = "fulfilled"
+                order.created_at = order_date
+                order.updated_at = order_date
+                order.processed_at = order_date
+                order.order_sequence = order_num + 1
+                order.days_since_first_order = (order_date - first_order_date).days
+                order.is_returned = random.random() < 0.05  # 5% return rate
+                order.shopify_data = {
+                    "id": f"demo_order_{customer_num}_{order_num + 1}",
+                    "order_number": f"#{1000 + orders_created}",
+                    "demo": True,
+                    "customer_segment": segment_type
+                }
                 
                 db.session.add(order)
                 db.session.flush()  # Get order ID
@@ -171,21 +168,20 @@ class DemoOrdersGenerator:
             quantity = random.randint(1, 3)
             price_per_item = max(item_total / quantity, 1.0)
             
-            line_item = OrderLineItem(
-                order_id=order.id,
-                product_id=product.id,
-                store_id=order.store_id,
-                variant_title=f"{product.title} - Standard",
-                quantity=quantity,
-                price=Decimal(str(round(price_per_item, 2))),
-                total_discount=Decimal('0.00'),
-                is_returned=random.random() < 0.03,
-                shopify_data={
-                    "product_id": product.shopify_product_id,
-                    "variant_id": f"variant_{product.id}",
-                    "demo": True
-                }
-            )
+            line_item = OrderLineItem()
+            line_item.order_id = order.id
+            line_item.product_id = product.id
+            line_item.store_id = order.store_id
+            line_item.variant_title = f"{product.title} - Standard"
+            line_item.quantity = quantity
+            line_item.price = Decimal(str(round(price_per_item, 2)))
+            line_item.total_discount = Decimal('0.00')
+            line_item.is_returned = random.random() < 0.03
+            line_item.shopify_data = {
+                "product_id": product.shopify_product_id,
+                "variant_id": f"variant_{product.id}",
+                "demo": True
+            }
             
             db.session.add(line_item)
             

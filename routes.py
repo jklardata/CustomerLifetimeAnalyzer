@@ -75,6 +75,7 @@ def auth():
         flash('An error occurred during authentication setup. Please try again.', 'error')
         return redirect(url_for('index'))
 
+@app.route('/demo-login')
 def demo_login():
     """Demo login for testing platform functionality"""
     try:

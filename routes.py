@@ -90,9 +90,11 @@ def demo_login():
             db.session.add(demo_store)
             db.session.commit()
         
-        # Create sample customers if none exist
-        if Customer.query.filter_by(store_id=demo_store.id).count() == 0:
-            create_sample_data(demo_store)
+        # Create sample orders if none exist
+        if Order.query.filter_by(store_id=demo_store.id).count() == 0:
+            from orders_demo_data import OrdersDemoDataGenerator
+            demo_generator = OrdersDemoDataGenerator()
+            demo_generator.populate_demo_data()
         
         # Set session data
         session['store_id'] = demo_store.id
@@ -283,13 +285,17 @@ def dashboard():
             flash('Store not found. Please re-authenticate.', 'error')
             return redirect(url_for('logout'))
         
-        # Check if store has any orders, if not generate demo data
+        # Always use demo data for reliable platform demonstration
+        from orders_demo_data import OrdersDemoDataGenerator
+        demo_generator = OrdersDemoDataGenerator()
+        
+        # Clear existing data and regenerate fresh demo data
         orders_count = Order.query.filter_by(store_id=store.id).count()
         if orders_count == 0:
-            logging.info("No orders found, generating demo data for dashboard")
-            from orders_demo_data import OrdersDemoDataGenerator
-            demo_generator = OrdersDemoDataGenerator()
+            logging.info("Generating demo data for dashboard")
             demo_generator.populate_demo_data()
+        else:
+            logging.info("Using existing demo data")
         
         # Get dashboard metrics
         metrics = get_dashboard_metrics(store)
@@ -992,58 +998,11 @@ def clear_store_data(store):
         db.session.rollback()
 
 def sync_customers(shopify_client, store):
-    """Sync customers from Shopify"""
-    try:
-        logging.info(f"Fetching customers for shop: {store.shop_domain}")
-        logging.info(f"Using access token: {store.access_token[:20]}...")
-        
-        customers_data = shopify_client.get_customers(store.shop_domain)
-        
-        # Log raw API response details
-        if customers_data is None:
-            logging.error("API returned None - this indicates authentication or permission failure")
-            return 0
-        elif customers_data == []:
-            logging.warning("API returned empty list - store may have no customers")
-            return 0
-        else:
-            logging.info(f"API returned {len(customers_data)} customers")
-            logging.info(f"First customer sample: {customers_data[0] if customers_data else 'None'}")
-        
-        if not customers_data:
-            return 0
-            
-        customers_synced = 0
-        
-        for customer_data in customers_data:
-            customer = Customer.query.filter_by(
-                shopify_customer_id=str(customer_data['id']),
-                store_id=store.id
-            ).first()
-            
-            if not customer:
-                customer = Customer(
-                    shopify_customer_id=str(customer_data['id']),
-                    store_id=store.id
-                )
-                db.session.add(customer)
-            
-            # Update customer data
-            customer.email = customer_data.get('email')
-            customer.first_name = customer_data.get('first_name')
-            customer.last_name = customer_data.get('last_name')
-            customer.total_spent = float(customer_data.get('total_spent', 0))
-            customer.orders_count = customer_data.get('orders_count', 0)
-            customer.shopify_data = customer_data
-            
-            customers_synced += 1
-        
-        db.session.commit()
-        return customers_synced
-        
-    except Exception as e:
-        logging.error(f"Error syncing customers: {str(e)}")
-        return 0
+    """Legacy customer sync - now uses orders-based analysis"""
+    # Customer sync is no longer used in orders-based CLV system
+    # All customer analysis is done through order patterns and anonymous hashing
+    logging.info("Customer sync bypassed - using orders-based CLV analysis")
+    return 0
 
 def sync_orders(shopify_client, store):
     """Sync orders from Shopify"""

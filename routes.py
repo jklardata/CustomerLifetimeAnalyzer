@@ -93,9 +93,37 @@ def demo_login():
         
         # Create sample orders if none exist
         if Order.query.filter_by(store_id=demo_store.id).count() == 0:
-            from demo_orders_generator import DemoOrdersGenerator
-            demo_generator = DemoOrdersGenerator()
-            demo_generator.populate_demo_data()
+            # Create simple demo orders directly
+            import hashlib
+            from decimal import Decimal
+            from datetime import datetime, timedelta
+            
+            for i in range(20):
+                customer_hash = hashlib.sha256(f"demo_customer_{i}".encode()).hexdigest()
+                order_date = datetime.utcnow() - timedelta(days=random.randint(1, 90))
+                
+                order = Order()
+                order.shopify_order_id = f"demo_order_{i}_{random.randint(1000, 9999)}"
+                order.store_id = demo_store.id
+                order.customer_hash = customer_hash
+                order.order_number = f"#{1000 + i}"
+                order.total_price = Decimal(str(random.uniform(50, 300)))
+                order.subtotal_price = order.total_price * Decimal('0.9')
+                order.total_tax = order.total_price * Decimal('0.1')
+                order.currency = "USD"
+                order.financial_status = "paid"
+                order.fulfillment_status = "fulfilled"
+                order.created_at = order_date
+                order.updated_at = order_date
+                order.processed_at = order_date
+                order.order_sequence = 1
+                order.days_since_first_order = 0
+                order.is_returned = False
+                order.shopify_data = {"demo": True}
+                
+                db.session.add(order)
+            
+            db.session.commit()
         
         # Set session data
         session['store_id'] = demo_store.id

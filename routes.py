@@ -1,8 +1,8 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from app import app, db
-from models import ShopifyStore, Customer, Order, CLVPrediction, Product, AbandonedCart
+from models import ShopifyStore, Order, CLVPrediction, Product, AbandonedCart
 from shopify_client import ShopifyClient
-from clv_calculator import CLVCalculator
+from orders_clv_calculator import OrdersCLVCalculator
 import logging
 import traceback
 import random

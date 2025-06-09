@@ -252,13 +252,13 @@ class OrdersCLVCalculator:
             recommendations.append("Focus on customer retention - only {:.1f}% of customers make repeat purchases".format(metrics['repeat_customer_rate']))
         
         # Churn prevention
-        if churn_analysis and len(churn_analysis.get('high_risk', [])) > 0:
-            high_risk_count = len(churn_analysis['high_risk'])
+        if churn_analysis and churn_analysis.get('high_risk', 0) > 0:
+            high_risk_count = churn_analysis['high_risk']
             recommendations.append("Implement win-back campaigns for {} high-risk customers".format(high_risk_count))
         
         # Segmentation recommendations
-        if len(segments['high']) > 0:
-            high_value_count = len(segments['high'])
+        if segments.get('high', 0) > 0:
+            high_value_count = segments['high']
             recommendations.append("Create VIP program for {} high-value customers to increase retention".format(high_value_count))
         
         return recommendations

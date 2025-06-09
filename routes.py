@@ -870,8 +870,8 @@ def get_dashboard_metrics(store):
         revenue_trends = clv_calculator.get_revenue_trends(store)
         ai_recommendations = clv_calculator.generate_ai_recommendations(store)
         
-        # Top customer segments by CLV
-        top_customers = customer_segmentation.get('high', [])[:10] if customer_segmentation else []
+        # Top customer segments by CLV - handle new data structure
+        top_customers = []  # Empty for now since we're using count-based segmentation
         
         # Recent orders
         recent_orders = Order.query.filter_by(store_id=store.id)\
@@ -928,7 +928,15 @@ def get_dashboard_metrics(store):
         
     except Exception as e:
         logging.error(f"Error calculating metrics: {str(e)}")
-        return {
+        logging.error(traceback.format_exc())
+        
+        class MetricsObject:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+        
+        # Return proper fallback structure
+        return MetricsObject({
             'total_customers': 0,
             'total_orders': 0,
             'total_revenue': 0,
@@ -938,10 +946,13 @@ def get_dashboard_metrics(store):
             'return_rate': 0,
             'top_customers': [],
             'recent_orders': [],
-            'customer_segmentation': {'high': 0, 'medium': 0, 'low': 0, 'segments': {}},
-            'aov_trend': {'trend_data': [], 'current_aov': 0, 'change_percentage': 0},
-            'churn_risk': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
-        }
+            'customer_segmentation': MetricsObject({'high': 0, 'medium': 0, 'low': 0}),
+            'aov_trend': MetricsObject({'current_aov': 0, 'trend_data': [], 'change_percentage': 0}),
+            'churn_risk': MetricsObject({'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}),
+            'revenue_retention': MetricsObject({'retention_rate': 0, 'current_rate': 0, 'previous_rate': 0, 'change': 0, 'recent_revenue': 0, 'previous_revenue': 0, 'growth_rate': 0}),
+            'top_return_products': [],
+            'ai_recommendations': []
+        })
 
 def create_test_customers_in_store(store):
     """Create test customers directly in database for empty stores"""

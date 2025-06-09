@@ -92,8 +92,8 @@ def demo_login():
         
         # Create sample orders if none exist
         if Order.query.filter_by(store_id=demo_store.id).count() == 0:
-            from orders_demo_data import OrdersDemoDataGenerator
-            demo_generator = OrdersDemoDataGenerator()
+            from demo_orders_generator import DemoOrdersGenerator
+            demo_generator = DemoOrdersGenerator()
             demo_generator.populate_demo_data()
         
         # Set session data
@@ -285,14 +285,14 @@ def dashboard():
             flash('Store not found. Please re-authenticate.', 'error')
             return redirect(url_for('logout'))
         
-        # Always use demo data for reliable platform demonstration
-        from orders_demo_data import OrdersDemoDataGenerator
-        demo_generator = OrdersDemoDataGenerator()
+        # Use demo data for reliable platform demonstration
+        from demo_orders_generator import DemoOrdersGenerator
+        demo_generator = DemoOrdersGenerator()
         
-        # Clear existing data and regenerate fresh demo data
+        # Check if demo data exists, generate if needed
         orders_count = Order.query.filter_by(store_id=store.id).count()
         if orders_count == 0:
-            logging.info("Generating demo data for dashboard")
+            logging.info("Generating comprehensive demo data for dashboard")
             demo_generator.populate_demo_data()
         else:
             logging.info("Using existing demo data")
@@ -547,7 +547,7 @@ def product_clv_optimization():
         return redirect(url_for('auth'))
     
     try:
-        from models import Product, OrderLineItem, Customer, Order
+        from models import Product, OrderLineItem, Order
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import train_test_split
         import pandas as pd
@@ -711,7 +711,7 @@ def abandoned_cart_recovery():
         return redirect(url_for('auth'))
     
     try:
-        from models import AbandonedCart, Customer
+        from models import AbandonedCart
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import train_test_split
         import pandas as pd

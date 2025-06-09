@@ -169,8 +169,13 @@ def create_sample_data(store):
 def callback():
     """Shopify OAuth callback"""
     try:
+        logging.info(f"OAuth callback received with args: {dict(request.args)}")
+        logging.info(f"Session oauth_state: {session.get('oauth_state')}")
+        logging.info(f"Request state: {request.args.get('state')}")
+        
         # Verify state parameter
         if request.args.get('state') != session.get('oauth_state'):
+            logging.error(f"OAuth state mismatch - Session: {session.get('oauth_state')}, Request: {request.args.get('state')}")
             flash('Invalid OAuth state. Please try again.', 'error')
             return redirect(url_for('index'))
         
@@ -182,12 +187,16 @@ def callback():
             return redirect(url_for('index'))
         
         # Exchange code for access token
+        logging.info(f"Attempting to get access token for shop: {shop}")
         shopify_client = ShopifyClient(app.config['SHOPIFY_API_KEY'], app.config['SHOPIFY_API_SECRET'])
         access_token = shopify_client.get_access_token(shop, code)
         
         if not access_token:
+            logging.error(f"Failed to obtain access token for shop: {shop}, code: {code[:10]}...")
             flash('Failed to obtain access token from Shopify.', 'error')
             return redirect(url_for('index'))
+            
+        logging.info(f"Successfully obtained access token for shop: {shop}")
         
         # Get shop information
         shopify_client.set_access_token(access_token)
@@ -254,8 +263,10 @@ def callback():
         
     except Exception as e:
         logging.error(f"OAuth callback error: {str(e)}")
+        logging.error(f"Request args: {dict(request.args)}")
+        logging.error(f"Session data: {dict(session)}")
         logging.error(traceback.format_exc())
-        flash('An error occurred during authentication. Please try again.', 'error')
+        flash(f'Authentication error: {str(e)}', 'error')
         return redirect(url_for('index'))
 
 @app.route('/dashboard')

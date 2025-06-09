@@ -1,17 +1,13 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from app import app, db
-from models import ShopifyStore, Order, CLVPrediction, Product, AbandonedCart
+from models import ShopifyStore, Customer, Order, CLVPrediction
 from shopify_client import ShopifyClient
-from orders_clv_calculator import OrdersCLVCalculator
+from clv_calculator import CLVCalculator
 import logging
 import traceback
-import random
 from urllib.parse import urlencode
 import secrets
 from datetime import datetime, timedelta
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
 
 @app.route('/')
 def index():
@@ -75,7 +71,6 @@ def auth():
         flash('An error occurred during authentication setup. Please try again.', 'error')
         return redirect(url_for('index'))
 
-@app.route('/demo-login')
 def demo_login():
     """Demo login for testing platform functionality"""
     try:
@@ -91,39 +86,9 @@ def demo_login():
             db.session.add(demo_store)
             db.session.commit()
         
-        # Create sample orders if none exist
-        if Order.query.filter_by(store_id=demo_store.id).count() == 0:
-            # Create simple demo orders directly
-            import hashlib
-            from decimal import Decimal
-            from datetime import datetime, timedelta
-            
-            for i in range(20):
-                customer_hash = hashlib.sha256(f"demo_customer_{i}".encode()).hexdigest()
-                order_date = datetime.utcnow() - timedelta(days=random.randint(1, 90))
-                
-                order = Order()
-                order.shopify_order_id = f"demo_order_{i}_{random.randint(1000, 9999)}"
-                order.store_id = demo_store.id
-                order.customer_hash = customer_hash
-                order.order_number = f"#{1000 + i}"
-                order.total_price = Decimal(str(random.uniform(50, 300)))
-                order.subtotal_price = order.total_price * Decimal('0.9')
-                order.total_tax = order.total_price * Decimal('0.1')
-                order.currency = "USD"
-                order.financial_status = "paid"
-                order.fulfillment_status = "fulfilled"
-                order.created_at = order_date
-                order.updated_at = order_date
-                order.processed_at = order_date
-                order.order_sequence = 1
-                order.days_since_first_order = 0
-                order.is_returned = False
-                order.shopify_data = {"demo": True}
-                
-                db.session.add(order)
-            
-            db.session.commit()
+        # Create sample customers if none exist
+        if Customer.query.filter_by(store_id=demo_store.id).count() == 0:
+            create_sample_data(demo_store)
         
         # Set session data
         session['store_id'] = demo_store.id
@@ -200,13 +165,8 @@ def create_sample_data(store):
 def callback():
     """Shopify OAuth callback"""
     try:
-        logging.info(f"OAuth callback received with args: {dict(request.args)}")
-        logging.info(f"Session oauth_state: {session.get('oauth_state')}")
-        logging.info(f"Request state: {request.args.get('state')}")
-        
         # Verify state parameter
         if request.args.get('state') != session.get('oauth_state'):
-            logging.error(f"OAuth state mismatch - Session: {session.get('oauth_state')}, Request: {request.args.get('state')}")
             flash('Invalid OAuth state. Please try again.', 'error')
             return redirect(url_for('index'))
         
@@ -218,16 +178,12 @@ def callback():
             return redirect(url_for('index'))
         
         # Exchange code for access token
-        logging.info(f"Attempting to get access token for shop: {shop}")
         shopify_client = ShopifyClient(app.config['SHOPIFY_API_KEY'], app.config['SHOPIFY_API_SECRET'])
         access_token = shopify_client.get_access_token(shop, code)
         
         if not access_token:
-            logging.error(f"Failed to obtain access token for shop: {shop}, code: {code[:10]}...")
             flash('Failed to obtain access token from Shopify.', 'error')
             return redirect(url_for('index'))
-            
-        logging.info(f"Successfully obtained access token for shop: {shop}")
         
         # Get shop information
         shopify_client.set_access_token(access_token)
@@ -294,10 +250,8 @@ def callback():
         
     except Exception as e:
         logging.error(f"OAuth callback error: {str(e)}")
-        logging.error(f"Request args: {dict(request.args)}")
-        logging.error(f"Session data: {dict(session)}")
         logging.error(traceback.format_exc())
-        flash(f'Authentication error: {str(e)}', 'error')
+        flash('An error occurred during authentication. Please try again.', 'error')
         return redirect(url_for('index'))
 
 @app.route('/dashboard')
@@ -313,18 +267,6 @@ def dashboard():
         if not store:
             flash('Store not found. Please re-authenticate.', 'error')
             return redirect(url_for('logout'))
-        
-        # Use demo data for reliable platform demonstration
-        from demo_orders_generator import DemoOrdersGenerator
-        demo_generator = DemoOrdersGenerator()
-        
-        # Check if demo data exists, generate if needed
-        orders_count = Order.query.filter_by(store_id=store.id).count()
-        if orders_count == 0:
-            logging.info("Generating comprehensive demo data for dashboard")
-            demo_generator.populate_demo_data()
-        else:
-            logging.info("Using existing demo data")
         
         # Get dashboard metrics
         metrics = get_dashboard_metrics(store)
@@ -506,51 +448,21 @@ def sync_data():
         logging.info(f"Access token exists: {'Yes' if store.access_token else 'No'}")
         logging.info(f"Access token length: {len(store.access_token) if store.access_token else 0}")
         
-        # Test API connection and permissions
-        shop_info_test = shopify_client.get_shop_info(store.shop_domain)
-        if shop_info_test:
-            logging.info(f"API connection successful - Shop: {shop_info_test.get('name')}")
-            
-            # Test orders API access (bypasses protected customer data restrictions)
-            test_orders = shopify_client.get_orders(store.shop_domain, limit=1)
-            if test_orders is not None:
-                logging.info(f"Orders API access working - returned {len(test_orders)} orders")
-            else:
-                logging.error("Orders API access failed - check authentication")
-                return jsonify({
-                    'success': False,
-                    'error': 'Orders API access failed - check authentication'
-                })
-                
-        else:
-            logging.error("API connection failed - check access token and permissions")
-        
-        # Test database connection
-        try:
-            db.session.execute(db.text("SELECT 1"))
-            logging.info("Database connection successful")
-        except Exception as db_error:
-            logging.error(f"Database connection error: {str(db_error)}")
-        
-        # Sync orders only (no customer data stored)
+        # Sync customers and orders
+        customers_synced = sync_customers(shopify_client, store)
         orders_synced = sync_orders(shopify_client, store)
         
-        logging.info(f"Sync completed - Orders: {orders_synced}")
+        logging.info(f"Sync completed - Customers: {customers_synced}, Orders: {orders_synced}")
         
-        # Check orders saved
-        actual_orders = Order.query.filter_by(store_id=store.id).count()
-        logging.info(f"Orders in database after sync: {actual_orders}")
-        
-        # Calculate CLV using orders-based analysis
-        clv_calculator = OrdersCLVCalculator()
-        metrics = clv_calculator.calculate_order_metrics(store)
-        clv_updates = metrics.get('unique_customers', 0)
+        # Calculate CLV for all customers
+        clv_calculator = CLVCalculator()
+        clv_updates = clv_calculator.calculate_store_clv(store)
         
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'customers_synced': 0,  # No longer storing customer data
+            'customers_synced': customers_synced,
             'orders_synced': orders_synced,
             'clv_updates': clv_updates
         })
@@ -576,7 +488,7 @@ def product_clv_optimization():
         return redirect(url_for('auth'))
     
     try:
-        from models import Product, OrderLineItem, Order
+        from models import Product, OrderLineItem, Customer, Order
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import train_test_split
         import pandas as pd
@@ -740,7 +652,7 @@ def abandoned_cart_recovery():
         return redirect(url_for('auth'))
     
     try:
-        from models import AbandonedCart
+        from models import AbandonedCart, Customer
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import train_test_split
         import pandas as pd
@@ -841,74 +753,46 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': str(datetime.utcnow())})
 
 def get_dashboard_metrics(store):
-    """Calculate dashboard metrics for a store using orders-based analysis"""
+    """Calculate dashboard metrics for a store"""
     try:
-        clv_calculator = OrdersCLVCalculator()
-        
-        # Get comprehensive metrics from orders-based calculator
-        metrics = clv_calculator.calculate_order_metrics(store)
+        clv_calculator = CLVCalculator()
         
         # Basic counts
-        total_customers = metrics.get('unique_customers', 0)
-        total_orders = metrics.get('total_orders', 0)
+        total_customers = Customer.query.filter_by(store_id=store.id).count()
+        total_orders = Order.query.filter_by(store_id=store.id).count()
         
         # Revenue metrics
-        total_revenue = metrics.get('total_revenue', 0)
-        avg_order_value = metrics.get('avg_order_value', 0)
+        total_revenue = db.session.query(db.func.sum(Order.total_price)).filter_by(store_id=store.id).scalar() or 0
+        avg_order_value = db.session.query(db.func.avg(Order.total_price)).filter_by(store_id=store.id).scalar() or 0
         
         # CLV metrics
-        avg_clv = metrics.get('avg_clv', 0)
-        total_clv = avg_clv * total_customers if total_customers > 0 else 0
+        avg_clv = db.session.query(db.func.avg(Customer.predicted_clv)).filter_by(store_id=store.id).scalar() or 0
+        total_clv = db.session.query(db.func.sum(Customer.predicted_clv)).filter_by(store_id=store.id).scalar() or 0
         
         # Return rate
         total_returns = Order.query.filter_by(store_id=store.id, is_returned=True).count()
         return_rate = (total_returns / total_orders * 100) if total_orders > 0 else 0
         
-        # Enhanced metrics using orders-based analysis
-        customer_segmentation = clv_calculator.get_clv_segments(store)
-        churn_analysis = clv_calculator.predict_churn_risk(store)
-        revenue_trends = clv_calculator.get_revenue_trends(store)
+        # New enhanced metrics
+        customer_segmentation = clv_calculator.get_customer_segmentation_by_clv(store)
+        aov_trend = clv_calculator.calculate_aov_trend(store, 30)
+        churn_risk = clv_calculator.calculate_churn_risk_metrics(store)
+        revenue_retention = clv_calculator.calculate_revenue_retention_rate(store)
+        top_return_products = clv_calculator.get_top_products_by_return_rate(store)
         ai_recommendations = clv_calculator.generate_ai_recommendations(store)
         
-        # Top customer segments by CLV - handle new data structure
-        top_customers = []  # Empty for now since we're using count-based segmentation
+        # Top customers by CLV
+        top_customers = Customer.query.filter_by(store_id=store.id)\
+            .filter(Customer.predicted_clv.isnot(None))\
+            .order_by(Customer.predicted_clv.desc())\
+            .limit(10).all()
         
         # Recent orders
         recent_orders = Order.query.filter_by(store_id=store.id)\
             .order_by(Order.created_at.desc())\
             .limit(10).all()
         
-        # Create proper data structure for template
-        class MetricsObject:
-            def __init__(self, data):
-                for key, value in data.items():
-                    setattr(self, key, value)
-        
-        aov_trend = MetricsObject({
-            'current_aov': avg_order_value,
-            'trend_data': [],
-            'change_percentage': 0
-        })
-        
-        churn_risk = MetricsObject({
-            'high_risk': churn_analysis.get('high_risk', 0),
-            'medium_risk': churn_analysis.get('medium_risk', 0),
-            'low_risk': churn_analysis.get('low_risk', 0),
-            'total_at_risk': churn_analysis.get('total_at_risk', 0),
-            'at_risk_percentage': churn_analysis.get('at_risk_percentage', 0)
-        })
-        
-        revenue_retention = MetricsObject({
-            'retention_rate': revenue_trends.get('retention_rate', 75),
-            'current_rate': revenue_trends.get('retention_rate', 75),
-            'previous_rate': revenue_trends.get('previous_retention_rate', 70),
-            'change': 5,
-            'recent_revenue': total_revenue * 0.6,
-            'previous_revenue': total_revenue * 0.4,
-            'growth_rate': 15.2
-        })
-        
-        return MetricsObject({
+        return {
             'total_customers': total_customers,
             'total_orders': total_orders,
             'total_revenue': float(total_revenue),
@@ -918,25 +802,18 @@ def get_dashboard_metrics(store):
             'return_rate': round(return_rate, 2),
             'top_customers': top_customers,
             'recent_orders': recent_orders,
+            # New metrics
             'customer_segmentation': customer_segmentation,
             'aov_trend': aov_trend,
             'churn_risk': churn_risk,
             'revenue_retention': revenue_retention,
-            'top_return_products': [],
+            'top_return_products': top_return_products,
             'ai_recommendations': ai_recommendations
-        })
+        }
         
     except Exception as e:
         logging.error(f"Error calculating metrics: {str(e)}")
-        logging.error(traceback.format_exc())
-        
-        class MetricsObject:
-            def __init__(self, data):
-                for key, value in data.items():
-                    setattr(self, key, value)
-        
-        # Return proper fallback structure
-        return MetricsObject({
+        return {
             'total_customers': 0,
             'total_orders': 0,
             'total_revenue': 0,
@@ -946,105 +823,10 @@ def get_dashboard_metrics(store):
             'return_rate': 0,
             'top_customers': [],
             'recent_orders': [],
-            'customer_segmentation': MetricsObject({'high': 0, 'medium': 0, 'low': 0}),
-            'aov_trend': MetricsObject({'current_aov': 0, 'trend_data': [], 'change_percentage': 0}),
-            'churn_risk': MetricsObject({'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}),
-            'revenue_retention': MetricsObject({'retention_rate': 0, 'current_rate': 0, 'previous_rate': 0, 'change': 0, 'recent_revenue': 0, 'previous_revenue': 0, 'growth_rate': 0}),
-            'top_return_products': [],
-            'ai_recommendations': []
-        })
-
-def create_test_customers_in_store(store):
-    """Create test customers directly in database for empty stores"""
-    try:
-        logging.info(f"Creating test customers for store: {store.shop_domain}")
-        
-        test_customers = [
-            {
-                'shopify_customer_id': 'test_1',
-                'email': 'john@example.com',
-                'first_name': 'John',
-                'last_name': 'Smith',
-                'total_spent': 450.00,
-                'orders_count': 3
-            },
-            {
-                'shopify_customer_id': 'test_2',
-                'email': 'sarah@example.com',
-                'first_name': 'Sarah',
-                'last_name': 'Johnson',
-                'total_spent': 325.50,
-                'orders_count': 2
-            },
-            {
-                'shopify_customer_id': 'test_3',
-                'email': 'mike@example.com',
-                'first_name': 'Mike',
-                'last_name': 'Davis',
-                'total_spent': 675.25,
-                'orders_count': 4
-            },
-            {
-                'shopify_customer_id': 'test_4',
-                'email': 'emily@example.com',
-                'first_name': 'Emily',
-                'last_name': 'Wilson',
-                'total_spent': 890.00,
-                'orders_count': 5
-            },
-            {
-                'shopify_customer_id': 'test_5',
-                'email': 'david@example.com',
-                'first_name': 'David',
-                'last_name': 'Brown',
-                'total_spent': 234.75,
-                'orders_count': 1
-            }
-        ]
-        
-        customers_created = 0
-        for customer_data in test_customers:
-            customer = Customer()
-            customer.shopify_customer_id = customer_data['shopify_customer_id']
-            customer.store_id = store.id
-            customer.email = customer_data['email']
-            customer.first_name = customer_data['first_name']
-            customer.last_name = customer_data['last_name']
-            customer.total_spent = customer_data['total_spent']
-            customer.orders_count = customer_data['orders_count']
-            customer.created_at = datetime.utcnow() - timedelta(days=random.randint(30, 365))
-            
-            db.session.add(customer)
-            customers_created += 1
-        
-        # Create corresponding orders
-        orders_created = 0
-        for customer in Customer.query.filter_by(store_id=store.id).all():
-            for i in range(customer.orders_count):
-                order = Order()
-                order.shopify_order_id = f"test_order_{customer.id}_{i+1}"
-                order.store_id = store.id
-                order.customer_id = customer.id
-                order.order_number = f"#{1000 + customer.id * 10 + i}"
-                order.total_price = customer.total_spent / customer.orders_count
-                order.subtotal_price = order.total_price * 0.9
-                order.total_tax = order.total_price * 0.1
-                order.currency = "USD"
-                order.financial_status = "paid"
-                order.fulfillment_status = "fulfilled"
-                order.created_at = customer.created_at + timedelta(days=random.randint(1, 30))
-                order.updated_at = order.created_at
-                order.processed_at = order.created_at
-                
-                db.session.add(order)
-                orders_created += 1
-        
-        db.session.commit()
-        logging.info(f"Created {customers_created} test customers and {orders_created} test orders")
-        
-    except Exception as e:
-        logging.error(f"Error creating test customers: {str(e)}")
-        db.session.rollback()
+            'customer_segmentation': {'high': 0, 'medium': 0, 'low': 0, 'segments': {}},
+            'aov_trend': {'trend_data': [], 'current_aov': 0, 'change_percentage': 0},
+            'churn_risk': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0, 'total_at_risk': 0, 'at_risk_percentage': 0}
+        }
 
 def clear_store_data(store):
     """Clear existing data for a store before syncing new data"""
@@ -1069,11 +851,47 @@ def clear_store_data(store):
         db.session.rollback()
 
 def sync_customers(shopify_client, store):
-    """Legacy customer sync - now uses orders-based analysis"""
-    # Customer sync is no longer used in orders-based CLV system
-    # All customer analysis is done through order patterns and anonymous hashing
-    logging.info("Customer sync bypassed - using orders-based CLV analysis")
-    return 0
+    """Sync customers from Shopify"""
+    try:
+        logging.info(f"Fetching customers for shop: {store.shop_domain}")
+        customers_data = shopify_client.get_customers(store.shop_domain)
+        logging.info(f"API returned {len(customers_data) if customers_data else 0} customers")
+        
+        if not customers_data:
+            logging.warning("No customer data returned from Shopify API")
+            return 0
+            
+        customers_synced = 0
+        
+        for customer_data in customers_data:
+            customer = Customer.query.filter_by(
+                shopify_customer_id=str(customer_data['id']),
+                store_id=store.id
+            ).first()
+            
+            if not customer:
+                customer = Customer(
+                    shopify_customer_id=str(customer_data['id']),
+                    store_id=store.id
+                )
+                db.session.add(customer)
+            
+            # Update customer data
+            customer.email = customer_data.get('email')
+            customer.first_name = customer_data.get('first_name')
+            customer.last_name = customer_data.get('last_name')
+            customer.total_spent = float(customer_data.get('total_spent', 0))
+            customer.orders_count = customer_data.get('orders_count', 0)
+            customer.shopify_data = customer_data
+            
+            customers_synced += 1
+        
+        db.session.commit()
+        return customers_synced
+        
+    except Exception as e:
+        logging.error(f"Error syncing customers: {str(e)}")
+        return 0
 
 def sync_orders(shopify_client, store):
     """Sync orders from Shopify"""
@@ -1101,11 +919,14 @@ def sync_orders(shopify_client, store):
                 )
                 db.session.add(order)
             
-            # Create anonymous customer hash (no personal data stored)
+            # Find customer
             if order_data.get('customer'):
-                from orders_clv_calculator import OrdersCLVCalculator
-                clv_calc = OrdersCLVCalculator()
-                order.customer_hash = clv_calc.hash_customer_id(order_data['customer']['id'])
+                customer = Customer.query.filter_by(
+                    shopify_customer_id=str(order_data['customer']['id']),
+                    store_id=store.id
+                ).first()
+                if customer:
+                    order.customer_id = customer.id
             
             # Update order data
             order.order_number = order_data.get('order_number')

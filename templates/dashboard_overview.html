@@ -397,7 +397,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    {% if metrics.customer_segmentation %}
+                    {% if metrics.top_customers %}
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
@@ -409,54 +409,24 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {% for customer in metrics.top_customers %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-success-light rounded-circle me-3">
-                                                <i data-feather="users" class="text-success small"></i>
+                                                <i data-feather="user" class="text-success small"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-medium">High Value Segment</div>
-                                                <small class="text-muted">{{ metrics.customer_segmentation.high }} customers</small>
+                                                <div class="fw-medium">{{ customer.first_name }} {{ customer.last_name }}</div>
+                                                <small class="text-muted">ID: {{ customer.shopify_customer_id }}</small>
                                             </div>
                                         </div>
                                     </td>
-                                    <td>Premium Customers</td>
-                                    <td class="fw-bold text-success">${{ "{:,.0f}".format(metrics.avg_clv * 1.5) }}</td>
-                                    <td>{{ (metrics.total_orders / metrics.total_customers * 1.8) | round | int if metrics.total_customers > 0 else 0 }}</td>
+                                    <td>{{ customer.email or '-' }}</td>
+                                    <td class="fw-bold text-success">${{ "{:,.0f}".format(customer.predicted_clv or 0) }}</td>
+                                    <td>{{ customer.orders_count }}</td>
                                 </tr>
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-warning-light rounded-circle me-3">
-                                                <i data-feather="user" class="text-warning small"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-medium">Medium Value Segment</div>
-                                                <small class="text-muted">{{ metrics.customer_segmentation.medium }} customers</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>Regular Customers</td>
-                                    <td class="fw-bold text-warning">${{ "{:,.0f}".format(metrics.avg_clv) }}</td>
-                                    <td>{{ (metrics.total_orders / metrics.total_customers) | round | int if metrics.total_customers > 0 else 0 }}</td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-secondary-light rounded-circle me-3">
-                                                <i data-feather="user" class="text-secondary small"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-medium">Low Value Segment</div>
-                                                <small class="text-muted">{{ metrics.customer_segmentation.low }} customers</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>New/Occasional Customers</td>
-                                    <td class="fw-bold text-secondary">${{ "{:,.0f}".format(metrics.avg_clv * 0.6) }}</td>
-                                    <td>{{ (metrics.total_orders / metrics.total_customers * 0.5) | round | int if metrics.total_customers > 0 else 0 }}</td>
-                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -504,7 +474,7 @@
                                         <div class="fw-medium">#{{ order.order_number or order.shopify_order_id }}</div>
                                         <small class="text-muted">{{ order.financial_status or 'pending' }}</small>
                                     </td>
-                                    <td>Customer {{ order.customer_hash[:8] if order.customer_hash else 'Guest' }}</td>
+                                    <td>{{ order.customer.first_name }} {{ order.customer.last_name if order.customer else 'Guest' }}</td>
                                     <td class="fw-bold">${{ "{:,.2f}".format(order.total_price or 0) }}</td>
                                     <td>
                                         <small>{{ order.created_at.strftime('%m/%d/%Y') if order.created_at else '-' }}</small>

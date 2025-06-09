@@ -109,9 +109,9 @@ class OrdersCLVCalculator:
         medium_threshold = int(total_customers * 0.6)  # Next 40%
         
         return {
-            'high': customer_clvs[:high_threshold],
-            'medium': customer_clvs[high_threshold:high_threshold + medium_threshold],
-            'low': customer_clvs[high_threshold + medium_threshold:]
+            'high': len(customer_clvs[:high_threshold]),
+            'medium': len(customer_clvs[high_threshold:high_threshold + medium_threshold]),
+            'low': len(customer_clvs[high_threshold + medium_threshold:])
         }
     
     def get_order_cohort_analysis(self, store) -> Dict:
@@ -188,10 +188,17 @@ class OrdersCLVCalculator:
         # Sort by churn risk
         churn_analysis.sort(key=lambda x: x['churn_risk'], reverse=True)
         
+        high_risk = len([c for c in churn_analysis if c['churn_risk'] > 80])
+        medium_risk = len([c for c in churn_analysis if 50 <= c['churn_risk'] <= 80])
+        low_risk = len([c for c in churn_analysis if c['churn_risk'] < 50])
+        total_at_risk = high_risk + medium_risk
+        
         return {
-            'high_risk': [c for c in churn_analysis if c['churn_risk'] > 80],
-            'medium_risk': [c for c in churn_analysis if 50 <= c['churn_risk'] <= 80],
-            'low_risk': [c for c in churn_analysis if c['churn_risk'] < 50]
+            'high_risk': high_risk,
+            'medium_risk': medium_risk,
+            'low_risk': low_risk,
+            'total_at_risk': total_at_risk,
+            'at_risk_percentage': round((total_at_risk / len(churn_analysis) * 100), 1) if churn_analysis else 0
         }
     
     def get_revenue_trends(self, store) -> Dict:

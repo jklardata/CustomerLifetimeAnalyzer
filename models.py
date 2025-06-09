@@ -118,7 +118,7 @@ class AbandonedCart(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     store_id = db.Column(db.Integer, db.ForeignKey('shopify_stores.id'), nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
+    customer_hash = db.Column(db.String(64))  # Anonymous customer identifier
     shopify_checkout_id = db.Column(db.String(100), nullable=False)
     
     # Cart details
@@ -143,7 +143,6 @@ class AbandonedCart(db.Model):
     
     # Relationships
     store = db.relationship('ShopifyStore', backref='abandoned_carts')
-    customer = db.relationship('Customer', backref='abandoned_carts')
     cart_line_items = db.relationship('AbandonedCartLineItem', backref='cart', lazy=True, cascade='all, delete-orphan')
     
     __table_args__ = (db.UniqueConstraint('shopify_checkout_id', 'store_id'),)
@@ -172,7 +171,7 @@ class CLVPrediction(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     store_id = db.Column(db.Integer, db.ForeignKey('shopify_stores.id'), nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
+    customer_hash = db.Column(db.String(64), nullable=False)  # Anonymous customer identifier
     
     predicted_clv = db.Column(db.Numeric(10, 2))
     confidence_score = db.Column(db.Float)
@@ -183,4 +182,3 @@ class CLVPrediction(db.Model):
     model_version = db.Column(db.String(50))
     
     store = db.relationship('ShopifyStore', backref='clv_predictions')
-    customer = db.relationship('Customer', backref='clv_predictions')

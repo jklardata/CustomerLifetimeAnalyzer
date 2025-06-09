@@ -283,6 +283,14 @@ def dashboard():
             flash('Store not found. Please re-authenticate.', 'error')
             return redirect(url_for('logout'))
         
+        # Check if store has any orders, if not generate demo data
+        orders_count = Order.query.filter_by(store_id=store.id).count()
+        if orders_count == 0:
+            logging.info("No orders found, generating demo data for dashboard")
+            from orders_demo_data import OrdersDemoDataGenerator
+            demo_generator = OrdersDemoDataGenerator()
+            demo_generator.populate_demo_data()
+        
         # Get dashboard metrics
         metrics = get_dashboard_metrics(store)
         
@@ -798,39 +806,37 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': str(datetime.utcnow())})
 
 def get_dashboard_metrics(store):
-    """Calculate dashboard metrics for a store"""
+    """Calculate dashboard metrics for a store using orders-based analysis"""
     try:
-        clv_calculator = CLVCalculator()
+        clv_calculator = OrdersCLVCalculator()
+        
+        # Get comprehensive metrics from orders-based calculator
+        metrics = clv_calculator.calculate_order_metrics(store)
         
         # Basic counts
-        total_customers = Customer.query.filter_by(store_id=store.id).count()
-        total_orders = Order.query.filter_by(store_id=store.id).count()
+        total_customers = metrics.get('unique_customers', 0)
+        total_orders = metrics.get('total_orders', 0)
         
         # Revenue metrics
-        total_revenue = db.session.query(db.func.sum(Order.total_price)).filter_by(store_id=store.id).scalar() or 0
-        avg_order_value = db.session.query(db.func.avg(Order.total_price)).filter_by(store_id=store.id).scalar() or 0
+        total_revenue = metrics.get('total_revenue', 0)
+        avg_order_value = metrics.get('avg_order_value', 0)
         
         # CLV metrics
-        avg_clv = db.session.query(db.func.avg(Customer.predicted_clv)).filter_by(store_id=store.id).scalar() or 0
-        total_clv = db.session.query(db.func.sum(Customer.predicted_clv)).filter_by(store_id=store.id).scalar() or 0
+        avg_clv = metrics.get('avg_clv', 0)
+        total_clv = avg_clv * total_customers if total_customers > 0 else 0
         
         # Return rate
         total_returns = Order.query.filter_by(store_id=store.id, is_returned=True).count()
         return_rate = (total_returns / total_orders * 100) if total_orders > 0 else 0
         
-        # New enhanced metrics
-        customer_segmentation = clv_calculator.get_customer_segmentation_by_clv(store)
-        aov_trend = clv_calculator.calculate_aov_trend(store, 30)
-        churn_risk = clv_calculator.calculate_churn_risk_metrics(store)
-        revenue_retention = clv_calculator.calculate_revenue_retention_rate(store)
-        top_return_products = clv_calculator.get_top_products_by_return_rate(store)
+        # Enhanced metrics using orders-based analysis
+        customer_segmentation = clv_calculator.get_clv_segments(store)
+        churn_analysis = clv_calculator.predict_churn_risk(store)
+        revenue_trends = clv_calculator.get_revenue_trends(store)
         ai_recommendations = clv_calculator.generate_ai_recommendations(store)
         
-        # Top customers by CLV
-        top_customers = Customer.query.filter_by(store_id=store.id)\
-            .filter(Customer.predicted_clv.isnot(None))\
-            .order_by(Customer.predicted_clv.desc())\
-            .limit(10).all()
+        # Top customer segments by CLV
+        top_customers = customer_segmentation.get('high', [])[:10] if customer_segmentation else []
         
         # Recent orders
         recent_orders = Order.query.filter_by(store_id=store.id)\
@@ -847,12 +853,10 @@ def get_dashboard_metrics(store):
             'return_rate': round(return_rate, 2),
             'top_customers': top_customers,
             'recent_orders': recent_orders,
-            # New metrics
+            # Enhanced metrics
             'customer_segmentation': customer_segmentation,
-            'aov_trend': aov_trend,
-            'churn_risk': churn_risk,
-            'revenue_retention': revenue_retention,
-            'top_return_products': top_return_products,
+            'churn_analysis': churn_analysis,
+            'revenue_trends': revenue_trends,
             'ai_recommendations': ai_recommendations
         }
         
